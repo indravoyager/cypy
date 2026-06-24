@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cypy"
-version = "0.0.1"
-description = "Cyrene's Ultimate Manga Translator - Auto translate Japanese manga panels to Indonesian using YOLO and Gemini"
+version = "0.2501"
+description = "CYPY: Cyrene's Python Manga Translator - Auto translate manga panels using YOLO and Gemini"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [

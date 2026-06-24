@@ -1,11 +1,18 @@
 import os
+import sys
 from dotenv import load_dotenv
 
 # ✦ Path Helper - Let's find where everything is~ ✦
 CORE_DIR = os.path.dirname(os.path.abspath(__file__))
 # CORE_DIR is where our core essence lies
 # ROOT_DIR is our magical home
-ROOT_DIR = os.path.abspath(os.path.join(CORE_DIR, "..", ".."))
+
+if getattr(sys, 'frozen', False):
+    ROOT_DIR = os.path.dirname(sys.executable)
+    ASSETS_DIR = os.path.join(getattr(sys, '_MEIPASS', ROOT_DIR), "assets")
+else:
+    ROOT_DIR = os.path.abspath(os.path.join(CORE_DIR, "..", ".."))
+    ASSETS_DIR = os.path.join(ROOT_DIR, "assets")
 
 load_dotenv(os.path.join(ROOT_DIR, ".env"))
 
@@ -13,8 +20,8 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 MODEL_GEMINI = "gemini-3.1-flash-lite-preview"
 
 # ✦ Assets Path - YOLO model and font files go here~ ✦
-MODEL_YOLO = os.path.join(ROOT_DIR, "assets", "eyecyre.pt")
-FONT_MANGA = os.path.join(ROOT_DIR, "assets", "Komika Axis.ttf")
+MODEL_YOLO = os.path.join(ASSETS_DIR, "eyecyre.pt")
+FONT_MANGA = os.path.join(ASSETS_DIR, "Komika Axis.ttf")
 
 # ==========================================
 # ✦ MOSAIC & CROP SETTINGS - Arranging page panels beautifully~ ✦
