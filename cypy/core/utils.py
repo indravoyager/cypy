@@ -78,63 +78,105 @@ def _has_non_latin(text):
             return True
     return False
 
-
 _DIRECT_FONT_MAP = {
     "korean": ("https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/Korean/NotoSansCJKkr-Regular.otf", ".otf"),
     "chinese (simplified)": ("https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf", ".otf"),
     "chinese": ("https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf", ".otf"),
+    "china": ("https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf", ".otf"),
     "chinese (traditional)": ("https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/TraditionalChinese/NotoSansCJKtc-Regular.otf", ".otf"),
     "thai": ("https://github.com/google/fonts/raw/main/ofl/notosansthai/NotoSansThai%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "thailand": ("https://github.com/google/fonts/raw/main/ofl/notosansthai/NotoSansThai%5Bwdth%2Cwght%5D.ttf", ".ttf"),
     "arabic": ("https://github.com/google/fonts/raw/main/ofl/notosansarabic/NotoSansArabic%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "urdu": ("https://github.com/google/fonts/raw/main/ofl/notosansarabic/NotoSansArabic%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "pakistan": ("https://github.com/google/fonts/raw/main/ofl/notosansarabic/NotoSansArabic%5Bwdth%2Cwght%5D.ttf", ".ttf"),
     "russian": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "russia": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
     "vietnamese": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "vietnam": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
     "bengali": ("https://github.com/google/fonts/raw/main/ofl/notosansbengali/NotoSansBengali%5Bwdth%2Cwght%5D.ttf", ".ttf"),
-    "hindi": ("https://github.com/google/fonts/raw/main/ofl/notosansdevanagari/NotoSansDevanagari%5Bwdth%2Cwght%5D.ttf", ".ttf")
+    "bangladesh": ("https://github.com/google/fonts/raw/main/ofl/notosansbengali/NotoSansBengali%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "hindi": ("https://github.com/google/fonts/raw/main/ofl/notosansdevanagari/NotoSansDevanagari%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "india": ("https://github.com/google/fonts/raw/main/ofl/notosansdevanagari/NotoSansDevanagari%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "hebrew": ("https://github.com/google/fonts/raw/main/ofl/notosanshebrew/NotoSansHebrew%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "tamil": ("https://github.com/google/fonts/raw/main/ofl/notosanstamil/NotoSansTamil%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "myanmar": ("https://github.com/google/fonts/raw/main/ofl/notosansmyanmar/NotoSansMyanmar%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "burmese": ("https://github.com/google/fonts/raw/main/ofl/notosansmyanmar/NotoSansMyanmar%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    
+    "mongolia": ("https://github.com/google/fonts/raw/main/ofl/notosansmongolian/NotoSansMongolian-Regular.ttf", ".ttf"),
+    "mongolian": ("https://github.com/google/fonts/raw/main/ofl/notosansmongolian/NotoSansMongolian-Regular.ttf", ".ttf"),
+    "kamboja": ("https://github.com/google/fonts/raw/main/ofl/notosanskhmer/NotoSansKhmer%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "khmer": ("https://github.com/google/fonts/raw/main/ofl/notosanskhmer/NotoSansKhmer%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "laos": ("https://github.com/google/fonts/raw/main/ofl/notosanslao/NotoSansLao%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "lao": ("https://github.com/google/fonts/raw/main/ofl/notosanslao/NotoSansLao%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "telugu": ("https://github.com/google/fonts/raw/main/ofl/notosanstelugu/NotoSansTelugu%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "kannada": ("https://github.com/google/fonts/raw/main/ofl/notosanskannada/NotoSansKannada%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "malayalam": ("https://github.com/google/fonts/raw/main/ofl/notosansmalayalam/NotoSansMalayalam%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "gujarati": ("https://github.com/google/fonts/raw/main/ofl/notosansgujarati/NotoSansGujarati%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "punjabi": ("https://github.com/google/fonts/raw/main/ofl/notosansgurmukhi/NotoSansGurmukhi%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "gurmukhi": ("https://github.com/google/fonts/raw/main/ofl/notosansgurmukhi/NotoSansGurmukhi%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "georgia": ("https://github.com/google/fonts/raw/main/ofl/notosansgeorgian/NotoSansGeorgian%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "georgian": ("https://github.com/google/fonts/raw/main/ofl/notosansgeorgian/NotoSansGeorgian%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "armenia": ("https://github.com/google/fonts/raw/main/ofl/notosansarmenian/NotoSansArmenian%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "armenian": ("https://github.com/google/fonts/raw/main/ofl/notosansarmenian/NotoSansArmenian%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "kazakhstan": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "kazakh": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "uzbekistan": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "uzbek": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "kirgizstan": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "kyrgyz": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "kyrgyzstan": ("https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "ethiopia": ("https://github.com/google/fonts/raw/main/ofl/notosansethiopic/NotoSansEthiopic%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "amharic": ("https://github.com/google/fonts/raw/main/ofl/notosansethiopic/NotoSansEthiopic%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "eritrea": ("https://github.com/google/fonts/raw/main/ofl/notosansethiopic/NotoSansEthiopic%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "tigrinya": ("https://github.com/google/fonts/raw/main/ofl/notosansethiopic/NotoSansEthiopic%5Bwdth%2Cwght%5D.ttf", ".ttf"),
+    "tigre": ("https://github.com/google/fonts/raw/main/ofl/notosansethiopic/NotoSansEthiopic%5Bwdth%2Cwght%5D.ttf", ".ttf")
 }
 
 def _download_noto_font(language):
     """
-    Download the appropriate font for a given language.
-    Uses direct GitHub links for full CJK fonts, and Google Fonts API for others.
+    Downloads Noto Sans font. For mapped languages, uses direct github links for full unsubsetted fonts.
+    For everything else, tries CSS API as fallback.
     """
-    if _requests is None:
-        print("  [!] 'requests' package not available, cannot download font.")
-        return None
+    if not os.path.exists(FONT_CACHE_DIR):
+        os.makedirs(FONT_CACHE_DIR)
 
-    os.makedirs(FONT_CACHE_DIR, exist_ok=True)
     lang_key = language.lower()
 
-    # Special handling for CJK to get full OTF fonts (16MB+)
     if lang_key in _DIRECT_FONT_MAP:
         url, ext = _DIRECT_FONT_MAP[lang_key]
-        safe_name = f"NotoSans_{lang_key.replace(' ', '')}"
+        safe_name = f"NotoSans_{lang_key.replace(' ', '')}_v3"
         cached_file = os.path.join(FONT_CACHE_DIR, f"{safe_name}{ext}")
         
         if os.path.exists(cached_file):
             return cached_file
             
-        print(f"  [Font] Downloading full font for {language} (this may take a moment)...")
+        print(f"  [Font] Downloading full font {safe_name}{ext}...")
+        
         try:
-            resp = _requests.get(url, stream=True, timeout=60)
-            if resp.status_code == 200:
-                total_size = int(resp.headers.get('content-length', 0))
-                downloaded = 0
+            response = _requests.get(url, stream=True, timeout=30, allow_redirects=True)
+            if response.status_code == 200:
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded_size = 0
                 
                 with open(cached_file, "wb") as f:
-                    for chunk in resp.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        if total_size > 0:
-                            percent = int(100 * downloaded / total_size)
-                            # Print progress on the same line
-                            print(f"\r  [Font] Downloading... {percent}% ({downloaded//1024}KB / {total_size//1024}KB)", end="")
-                print(f"\n  [Font] Downloaded successfully: {os.path.basename(cached_file)}")
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded_size += len(chunk)
+                            if total_size > 0:
+                                percent = int(downloaded_size * 100 / total_size)
+                                sys.stdout.write(f"\r  [Font] Downloading... {percent}% ({downloaded_size//1024}KB / {total_size//1024}KB)")
+                                sys.stdout.flush()
+                print() # newline
                 return cached_file
+            else:
+                print(f"  [!] Font download failed with status: {response.status_code}")
         except Exception as e:
-            print(f"\n  [!] Font download error: {e}")
-            return None
+            print(f"  [!] Font download error: {e}")
+            
+        return None
 
-    # Fallback to Google Fonts CSS API for other languages
+    # Fallback to Google Fonts CSS API for other unmapped languages
     import re
     font_family = _NOTO_SANS_MAP.get(lang_key)
     if not font_family:

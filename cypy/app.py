@@ -172,6 +172,11 @@ def tampilkan_help():
     print("│  status         Show current settings               │")
     print("│  help           Show this help menu                 │")
     print("│  stop / exit    Exit cypy                           │")
+    print("├─────────────────────────────────────────────────────┤")
+    print("│  API Providers Info:                                │")
+    print("│  To use OpenRouter or OpenAI, add these to .env:    │")
+    print("│  OPENROUTER_API_KEY=\"your_key_here\"                 │")
+    print("│  OPENAI_API_KEY=\"your_key_here\"                     │")
     print("└─────────────────────────────────────────────────────┘")
 
 

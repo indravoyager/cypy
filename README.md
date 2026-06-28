@@ -18,9 +18,10 @@
 
 ## Features
 
-- **Multi-Language Support:** Translate to English, Indonesian, Spanish, Portuguese, and Javanese with language-specific output suffixes (`_cypytr_en`, `_cypytr_id`, `_cypytr_es`, `_cypytr_pt`, `_cypytr_jv`).
-- **Interactive Language Switch:** Change the target language on the fly inside the loop by typing `lang` or `switch`.
-- **Zero-Setup Startup:** Prompts for the Gemini API key in the CLI and generates the `.env` file automatically if missing.
+- **Multi-Language Support:** Translate to English, Indonesian, Japanese (with native vertical *Tategaki* text!), Spanish, Portuguese, Javanese, and **Custom Languages** (supports Thai, Arabic, Cyrillic, etc. with automatic full variable font downloading!).
+- **Multi-Provider AI:** Choose between **Google Gemini**, **OpenRouter** (100+ models like Claude 3.5 Sonnet), or **OpenAI** (GPT-4o) directly from the CLI.
+- **Interactive Commands:** Change the target language (`lang`), switch API providers (`provider`), change models (`model`), or check current settings (`status`) on the fly inside the loop.
+- **Zero-Setup Startup:** Prompts for the API key in the CLI and generates the `.env` file automatically if missing.
 - **Auto Desktop Shortcut:** Creates a rounded Windows desktop shortcut automatically on the first run.
 
 ---
@@ -74,8 +75,17 @@ Download the pre-compiled package for your OS from the [Releases](https://github
 Customise settings inside the `.env` file:
 
 ```env
+# Gemini Config (Default)
 GEMINI_API_KEY=your_gemini_api_key_here
 MODEL_GEMINI=gemini-3.1-flash-lite-preview
+
+# OpenAI Config (Optional)
+OPENAI_API_KEY=your_openai_api_key_here
+MODEL_OPENAI=gpt-4o
+
+# OpenRouter Config (Optional)
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+MODEL_OPENROUTER=anthropic/claude-3.5-sonnet
 ```
 
 > [!NOTE]
