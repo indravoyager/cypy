@@ -16,7 +16,8 @@ dependencies = [
     "ultralytics",
     "google-genai",
     "python-dotenv",
-    "requests"
+    "requests",
+    "rarfile"
 ]
 
 [project.scripts]
