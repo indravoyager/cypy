@@ -5,7 +5,7 @@ from cypy.core.config import (
     MODEL_YOLO, FONT_MANGA, LANG_CODES, SUPPORTED_IMAGE_EXTENSIONS,
     LLM_PROVIDER, get_provider_config
 )
-from cypy.core.translator import proses_satu_gambar, mulai_ritual_pdf, proses_folder
+from cypy.core.translator import proses_satu_gambar, mulai_ritual_pdf, proses_folder, mulai_ritual_archive
 from cypy.core.providers import create_provider
 from cypy.core.utils import create_shortcut_if_first_run
 from cypy import __version__
@@ -182,7 +182,7 @@ def tampilkan_help():
     print("\n┌─────────────────────────────────────────────────────┐")
     print("│  Available Commands:                                │")
     print("│                                                     │")
-    print("│  [drag file]    Translate a single image or PDF     │")
+    print("│  [drag file]    Translate a single image, PDF, or CBZ │")
     print("│  [drag folder]  Batch translate all images in folder │")
     print("│  lang / switch  Change target language              │")
     print("│  provider / api Switch API provider                 │")
@@ -233,7 +233,7 @@ def main():
 
     while True:
         try:
-            raw_input_str = input("\nDrag-and-drop image/PDF/folder here (or 'help' 'stop'): ")
+            raw_input_str = input("\nDrag-and-drop image/PDF/CBZ/folder here (or 'help' 'stop'): ")
             input_file = raw_input_str.strip("\"'& ")
 
             cmd = input_file.lower()
@@ -284,6 +284,9 @@ def main():
                 if input_file.lower().endswith(".pdf"):
                     mulai_ritual_pdf(input_file, yolo_model, provider=provider, target_language=target_language)
 
+                elif input_file.lower().endswith(('.zip', '.cbz', '.rar', '.cbr')):
+                    mulai_ritual_archive(input_file, yolo_model, provider=provider, target_language=target_language)
+
                 elif input_file.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS):
                     hasil = proses_satu_gambar(input_file, yolo_model, provider=provider, target_language=target_language)
 
@@ -291,7 +294,7 @@ def main():
                         print(f"Done! Saved at: {hasil}")
 
                 else:
-                    print("[!] Unsupported format. Please give me PNG, JPG, JPEG, WEBP, or PDF~")
+                    print("[!] Unsupported format. Please give me PNG, JPG, JPEG, WEBP, PDF, CBZ, ZIP, CBR, or RAR~ ♪")
                     continue
 
                 elapsed = time.time() - start_time
@@ -301,7 +304,7 @@ def main():
                 print("[!] File not found.")
 
         except KeyboardInterrupt:
-            print("\n\nGoodbye~ ♪")
+            print("\n\nGoodbye.")
             break
         except Exception as e:
             print(f"[!] An error occurred: {e}")

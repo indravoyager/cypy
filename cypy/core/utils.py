@@ -693,6 +693,36 @@ def _perlu_digabung(a, b):
     return False
 
 
+def buang_kotak_raksasa_palsu(boxes):
+    """
+    Discards large bounding boxes that engulf smaller boxes, as they are usually 
+    false positives (like YOLO detecting the whole panel instead of just bubbles)~ ♪
+    """
+    if not boxes: return []
+    
+    boxes_with_area = [(b, _area_box(b)) for b in boxes]
+    boxes_with_area.sort(key=lambda x: x[1], reverse=True)
+    
+    keep = [True] * len(boxes_with_area)
+    
+    for i in range(len(boxes_with_area)):
+        if not keep[i]: continue
+        box_i, area_i = boxes_with_area[i]
+        
+        for j in range(i+1, len(boxes_with_area)):
+            if not keep[j]: continue
+            box_j, area_j = boxes_with_area[j]
+            
+            if area_i > 2.5 * area_j:
+                inter = _irisan_box(box_i, box_j)
+                # Jika kotak kecil berada >80% di dalam kotak besar
+                if inter >= 0.8 * area_j:
+                    keep[i] = False
+                    break
+                    
+    return [boxes_with_area[i][0] for i in range(len(boxes_with_area)) if keep[i]]
+
+
 def gabung_kotak_tumpang_tindih(boxes):
     """Merges duplicate YOLO boxes without fusing separate bubbles~ ♪"""
     if not boxes:
