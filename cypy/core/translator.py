@@ -24,6 +24,7 @@ from cypy.core.config import (
 )
 from cypy.core.utils import (
     bersihkan_json_dari_gemini,
+    buang_kotak_raksasa_palsu,
     gabung_kotak_tumpang_tindih, buang_kotak_ngawur, buang_kotak_sfx_dan_gambar,
     buat_crop_lega_tapi_tidak_nyamber, mask_luar_box_utama, tulis_teks_di_balon
 )
@@ -271,7 +272,8 @@ def _proses_satu_gambar_core(image_path, yolo_model, provider, target_language="
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             kotak_mentah.append([x1, y1, x2, y2])
 
-    kotak_matang = gabung_kotak_tumpang_tindih(kotak_mentah)
+    kotak_matang = buang_kotak_raksasa_palsu(kotak_mentah)
+    kotak_matang = gabung_kotak_tumpang_tindih(kotak_matang)
     kotak_matang = buang_kotak_ngawur(kotak_matang, lebar_img, tinggi_img)
     kotak_matang = buang_kotak_sfx_dan_gambar(
         img=img,
