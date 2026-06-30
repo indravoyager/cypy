@@ -12,7 +12,7 @@ except ImportError:
 class OpenAIProvider(LLMProvider):
     """
     OpenAI provider using the REST API directly.
-    Supports GPT-4o, GPT-4o-mini, and other vision-capable models.
+    Supports GPT-5.4, GPT-5.4-mini, and other vision-capable models.
     Uses only `requests` — no extra SDK needed~ ♪
 
     Get your API key at: https://platform.openai.com/api-keys

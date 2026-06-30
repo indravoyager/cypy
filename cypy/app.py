@@ -3,7 +3,8 @@ import time
 from ultralytics import YOLO
 from cypy.core.config import (
     MODEL_YOLO, FONT_MANGA, LANG_CODES, SUPPORTED_IMAGE_EXTENSIONS,
-    LLM_PROVIDER, get_provider_config
+    LLM_PROVIDER, CUSTOM_BASE_URL, ROOT_DIR, TARGET_LANGUAGE,
+    get_provider_config
 )
 from cypy.core.translator import proses_satu_gambar, mulai_ritual_pdf, proses_folder
 from cypy.core.providers import create_provider
@@ -21,17 +22,29 @@ PROVIDER_INFO = {
         "url": "https://aistudio.google.com/",
         "desc": "Free tier available",
     },
+    "openai": {
+        "name": "OpenAI",
+        "env_key": "OPENAI_API_KEY",
+        "url": "https://platform.openai.com/api-keys",
+        "desc": "GPT-5.4, GPT-5.4-mini",
+    },
+    "zen": {
+        "name": "Zen (opencode.ai)",
+        "env_key": "ZEN_API_KEY",
+        "url": "https://opencode.ai/auth",
+        "desc": "Free models, optional API key for more quota",
+    },
     "openrouter": {
         "name": "OpenRouter",
         "env_key": "OPENROUTER_API_KEY",
         "url": "https://openrouter.ai/keys",
         "desc": "Access 100+ models (Claude, Llama, Mistral, etc.)",
     },
-    "openai": {
-        "name": "OpenAI",
-        "env_key": "OPENAI_API_KEY",
-        "url": "https://platform.openai.com/api-keys",
-        "desc": "GPT-4o, GPT-4o-mini",
+    "custom": {
+        "name": "Custom",
+        "env_key": "CUSTOM_API_KEY",
+        "url": "",
+        "desc": "OpenAI-compatible API, custom base URL",
     },
 }
 
@@ -83,17 +96,95 @@ def pilih_provider():
     print("│  API Provider:                          │")
     print("│                                         │")
     print("│  [1] Google Gemini (Default, free tier) │")
-    print("│  [2] OpenRouter (100+ models)           │")
-    print("│  [3] OpenAI (GPT-4o)                    │")
+    print("│  [2] OpenAI (GPT-5.4)                    │")
+    print("│  [3] Zen opencode.ai (no key needed)    │")
+    print("│  [4] OpenRouter (100+ models)           │")
+    print("│  [5] Custom (OpenAI-compatible, own URL)│")
     print("└─────────────────────────────────────────┘")
 
-    choice = input("Select provider (1-3) [Default: 1]: ").strip()
+    choice = input("Select provider (1-5) [Default: 1]: ").strip()
     if choice == "2":
-        return "openrouter"
-    elif choice == "3":
         return "openai"
+    elif choice == "3":
+        return "zen"
+    elif choice == "4":
+        return "openrouter"
+    elif choice == "5":
+        return "custom"
     else:
         return "gemini"
+
+
+def _save_to_env(env_path, env_key, api_key, provider_name):
+    """Write/update a key in .env file."""
+    existing_lines = []
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            existing_lines = f.readlines()
+
+    key_found = False
+    new_lines = []
+    for line in existing_lines:
+        if line.strip().startswith(f"{env_key}="):
+            new_lines.append(f"{env_key}={api_key}\n")
+            key_found = True
+        else:
+            new_lines.append(line)
+    if not key_found:
+        new_lines.append(f"{env_key}={api_key}\n")
+
+    provider_found = any(l.strip().startswith("LLM_PROVIDER=") for l in new_lines)
+    if not provider_found:
+        new_lines.insert(0, f"LLM_PROVIDER={provider_name}\n")
+
+    # Ensure default model written once
+    model_defaults = {
+        "gemini": "MODEL_GEMINI=gemini-3.1-flash-lite\n",
+        "openai": "MODEL_OPENAI=gpt-5.4-mini\n",
+        "openrouter": "MODEL_OPENROUTER=qwen/qwen2.5-vl-72b-instruct:free\n",
+        "zen": "MODEL_ZEN=minimax-m3-free\n",
+        "custom": "MODEL_CUSTOM=gpt-5.4-mini\n",
+    }
+    if provider_name in model_defaults:
+        prefix = model_defaults[provider_name].split("=")[0] + "="
+        if not any(l.strip().startswith(prefix) for l in new_lines):
+            new_lines.append(model_defaults[provider_name])
+
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+
+def _save_to_env_simple(env_path, key, value):
+    """Write/update a single key=value line in .env file."""
+    existing_lines = []
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            existing_lines = f.readlines()
+
+    key_found = False
+    new_lines = []
+    for line in existing_lines:
+        if line.strip().startswith(f"{key}="):
+            new_lines.append(f"{key}={value}\n")
+            key_found = True
+        else:
+            new_lines.append(line)
+    if not key_found:
+        new_lines.append(f"{key}={value}\n")
+
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+
+def _env_has_key(env_path, key):
+    """Check if a key exists in the .env file."""
+    if not os.path.exists(env_path):
+        return False
+    with open(env_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.strip().startswith(f"{key}="):
+                return True
+    return False
 
 
 def setup_provider(provider_name=None):
@@ -105,8 +196,61 @@ def setup_provider(provider_name=None):
 
     api_key, model_name = get_provider_config(provider_name)
     info = PROVIDER_INFO.get(provider_name, PROVIDER_INFO["gemini"])
+    env_path = os.path.join(config.ROOT_DIR, ".env")
 
-    if not api_key:
+    if provider_name == "zen":
+        # Key is optional — prompt only if not already set
+        if not api_key:
+            print(f"\n[i] Zen (opencode.ai) works without an API key~ ♪")
+            print(f"    Optional: get a key at {info['url']} for more quota.")
+            entered = input("Paste your Zen API Key (or press Enter to skip): ").strip()
+            if entered:
+                api_key = entered
+                try:
+                    _save_to_env(env_path, info["env_key"], api_key, provider_name)
+                    config.ZEN_API_KEY = api_key
+                    os.environ[info["env_key"]] = api_key
+                    print(f"[+] Zen API Key saved to: {env_path} (✿◠‿◠)")
+                except Exception as e:
+                    print(f"[!] Warning: Failed to save API Key to .env: {e}")
+            else:
+                print("[+] Proceeding without API key~ ♪")
+
+    elif provider_name == "custom":
+        # Custom provider: base URL is required, API key is optional
+        base_url = CUSTOM_BASE_URL
+        if not base_url:
+            print(f"\n[i] Enter the base URL for your OpenAI-compatible API.")
+            print(f"    Example: https://api.example.com/v1")
+            entered = input("Base URL: ").strip()
+            while not entered:
+                entered = input("Base URL cannot be empty: ").strip()
+            base_url = entered
+            # Save base URL to .env
+            try:
+                _save_to_env_simple(env_path, "CUSTOM_BASE_URL", base_url)
+                config.CUSTOM_BASE_URL = base_url
+                os.environ["CUSTOM_BASE_URL"] = base_url
+                print(f"[+] Base URL saved to: {env_path}")
+            except Exception as e:
+                print(f"[!] Warning: Failed to save Base URL: {e}")
+
+        if not api_key:
+            print(f"\n[i] API key is optional (some providers don't require one).")
+            entered = input("Paste your API Key (or press Enter to skip): ").strip()
+            if entered:
+                api_key = entered
+                try:
+                    _save_to_env(env_path, info["env_key"], api_key, provider_name)
+                    config.CUSTOM_API_KEY = api_key
+                    os.environ[info["env_key"]] = api_key
+                    print(f"[+] API Key saved to: {env_path} (✿◠‿◠)")
+                except Exception as e:
+                    print(f"[!] Warning: Failed to save API Key to .env: {e}")
+            else:
+                print("[+] Proceeding without API key~ ♪")
+
+    elif not api_key:
         print(f"\n[!] {info['name']} API Key is missing!")
         print(f"Get your API key from: {info['url']}")
         api_key = input(f"Please paste your {info['name']} API Key here: ").strip()
@@ -114,54 +258,10 @@ def setup_provider(provider_name=None):
         while not api_key:
             api_key = input("API Key cannot be empty. Please paste your API Key: ").strip()
 
-        # Save to .env file
-        env_path = os.path.join(config.ROOT_DIR, ".env")
         try:
-            # Read existing .env content
-            existing_lines = []
-            if os.path.exists(env_path):
-                with open(env_path, "r", encoding="utf-8") as f:
-                    existing_lines = f.readlines()
-
-            # Update or add the key
-            env_key = info["env_key"]
-            key_found = False
-            new_lines = []
-            for line in existing_lines:
-                if line.strip().startswith(f"{env_key}="):
-                    new_lines.append(f"{env_key}={api_key}\n")
-                    key_found = True
-                else:
-                    new_lines.append(line)
-
-            if not key_found:
-                new_lines.append(f"{env_key}={api_key}\n")
-
-            # Ensure LLM_PROVIDER is set
-            provider_found = any(l.strip().startswith("LLM_PROVIDER=") for l in new_lines)
-            if not provider_found:
-                new_lines.insert(0, f"LLM_PROVIDER={provider_name}\n")
-
-            # Ensure model name is set in .env for clarity
-            if provider_name == "gemini":
-                model_found = any(l.strip().startswith("MODEL_GEMINI=") for l in new_lines)
-                if not model_found:
-                    new_lines.append("MODEL_GEMINI=gemini-3.1-flash-lite\n")
-            elif provider_name == "openai":
-                model_found = any(l.strip().startswith("MODEL_OPENAI=") for l in new_lines)
-                if not model_found:
-                    new_lines.append("MODEL_OPENAI=gpt-4o-mini\n")
-            elif provider_name == "openrouter":
-                model_found = any(l.strip().startswith("MODEL_OPENROUTER=") for l in new_lines)
-                if not model_found:
-                    new_lines.append("MODEL_OPENROUTER=google/gemini-2.0-flash-exp:free\n")
-
-            with open(env_path, "w", encoding="utf-8") as f:
-                f.writelines(new_lines)
-
+            _save_to_env(env_path, info["env_key"], api_key, provider_name)
             print(f"[+] API Key saved to: {env_path} (✿◠‿◠)")
 
-            # Update running config in memory
             if provider_name == "gemini":
                 config.GEMINI_API_KEY = api_key
             elif provider_name == "openrouter":
@@ -169,12 +269,16 @@ def setup_provider(provider_name=None):
             elif provider_name == "openai":
                 config.OPENAI_API_KEY = api_key
 
-            os.environ[env_key] = api_key
+            os.environ[info["env_key"]] = api_key
 
         except Exception as e:
             print(f"[!] Warning: Failed to save API Key to .env: {e}")
 
-    provider = create_provider(provider_name, api_key=api_key, model_name=model_name)
+    extra = {}
+    if provider_name == "custom":
+        extra["base_url"] = config.CUSTOM_BASE_URL
+
+    provider = create_provider(provider_name, api_key=api_key, model_name=model_name, **extra)
     return provider
 
 
@@ -195,12 +299,18 @@ def tampilkan_help():
     print("│  To use OpenRouter or OpenAI, add these to .env:    │")
     print("│  OPENROUTER_API_KEY=\"your_key_here\"                 │")
     print("│  OPENAI_API_KEY=\"your_key_here\"                     │")
+    print("│  Zen: free without key, or get one at:             │")
+    print("│  https://opencode.ai/auth  (ZEN_API_KEY)           │")
+    print("│  Custom: set CUSTOM_BASE_URL in .env               │")
+    print("│  CUSTOM_BASE_URL=https://your-api/v1               │")
     print("└─────────────────────────────────────────────────────┘")
 
 
 def tampilkan_status(provider, target_language):
     print(f"\n  Provider : {provider.provider_name}")
     print(f"  Model    : {provider.model_name}")
+    if hasattr(provider, "base_url"):
+        print(f"  Base URL : {provider.base_url}")
     print(f"  Language : {target_language}")
 
 
@@ -211,8 +321,16 @@ def main():
     print(f"CYPY v{__version__} - Manga Translator")
     print("Ready to translate~ (◠‿●) ~♪")
 
-    # Always let user choose provider
-    provider_name = pilih_provider()
+    env_path = os.path.join(ROOT_DIR, ".env")
+    has_provider = _env_has_key(env_path, "LLM_PROVIDER")
+    has_language = _env_has_key(env_path, "TARGET_LANGUAGE")
+
+    if has_provider:
+        provider_name = LLM_PROVIDER
+    else:
+        provider_name = pilih_provider()
+        _save_to_env_simple(env_path, "LLM_PROVIDER", provider_name)
+
     provider = setup_provider(provider_name)
 
     if not os.path.exists(MODEL_YOLO):
@@ -224,7 +342,11 @@ def main():
 
     yolo_model = YOLO(MODEL_YOLO)
 
-    target_language = pilih_bahasa()
+    if has_language:
+        target_language = TARGET_LANGUAGE or "Indonesian"
+    else:
+        target_language = pilih_bahasa()
+        _save_to_env_simple(env_path, "TARGET_LANGUAGE", target_language)
 
     # Show current config
     tampilkan_status(provider, target_language)

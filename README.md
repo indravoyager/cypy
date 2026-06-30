@@ -19,9 +19,10 @@
 ## Features
 
 - **Multi-Language Support:** Translate to English, Indonesian, Japanese (with native vertical *Tategaki* text!), Mandarin (简体中文), Spanish, Portuguese, Javanese, and **Custom Languages** (supports Thai, Arabic, Cyrillic, etc. with automatic full variable font downloading!).
-- **Multi-Provider AI:** Choose between **Google Gemini**, **OpenRouter** (100+ models like Claude 3.5 Sonnet), or **OpenAI** (GPT-4o) directly from the CLI.
+- **Multi-Provider AI:** Choose between **Google Gemini**, **OpenAI** (GPT-5,4), **Zen** (free, no key needed), **OpenRouter** (100+ models), or **Custom** (any OpenAI-compatible API) directly from the CLI.
 - **Interactive Commands:** Change the target language (`lang`), switch API providers (`provider`), change models (`model`), or check current settings (`status`) on the fly inside the loop.
-- **Zero-Setup Startup:** Prompts for the API key in the CLI and generates the `.env` file automatically if missing.
+- **Zero-Setup Startup:** Prompts for the API key in the CLI and generates the `.env` file automatically if missing. Zen works out of the box — no API key required.
+- **Custom API Support:** Bring your own OpenAI-compatible endpoint with configurable base URL, API key, and model.
 - **Auto Desktop Shortcut:** Creates a rounded Windows desktop shortcut automatically on the first run.
 
 ---
@@ -81,11 +82,20 @@ MODEL_GEMINI=gemini-3.1-flash-lite
 
 # OpenAI Config (Optional)
 OPENAI_API_KEY=your_openai_api_key_here
-MODEL_OPENAI=gpt-4o
+MODEL_OPENAI=gpt-5.4-mini
+
+# Zen (https://opencode.ai) — no API key required
+ZEN_API_KEY=
+MODEL_ZEN=minimax-m3-free
 
 # OpenRouter Config (Optional)
 OPENROUTER_API_KEY=your_openrouter_api_key_here
-MODEL_OPENROUTER=anthropic/claude-3.5-sonnet
+MODEL_OPENROUTER=qwen/qwen2.5-vl-72b-instruct:free
+
+# Custom OpenAI-compatible provider
+CUSTOM_BASE_URL=https://your-api.example.com/v1
+CUSTOM_API_KEY=your_api_key_here
+MODEL_CUSTOM=gpt-5.4-mini
 ```
 
 > [!NOTE]
@@ -105,7 +115,13 @@ cypy/
 │       ├── config.py
 │       ├── translator.py
 │       ├── utils.py
-│       └── providers/   # LLM integrations (Gemini, OpenRouter, OpenAI)
+│       └── providers/   # LLM integrations
+│           ├── base.py
+│           ├── gemini.py
+│           ├── openai_provider.py
+│           ├── zen.py
+│           ├── openrouter.py
+│           └── custom.py
 ├── pyproject.toml       # Python package configuration
 └── README.md
 ```
