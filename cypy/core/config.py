@@ -20,7 +20,7 @@ load_dotenv(os.path.join(ROOT_DIR, ".env"))
 # ==========================================
 # ✦ LLM PROVIDER SETTINGS - Choose your translation engine~ ♪ ✦
 # ==========================================
-# Supported providers: gemini, openrouter, openai
+# Supported providers: gemini, openai, zen, openrouter, custom
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").lower()
 
 # Google Gemini
@@ -29,11 +29,20 @@ MODEL_GEMINI = os.getenv("MODEL_GEMINI", "gemini-3.1-flash-lite")
 
 # OpenRouter (https://openrouter.ai)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-MODEL_OPENROUTER = os.getenv("MODEL_OPENROUTER", "google/gemini-2.0-flash-exp:free")
+MODEL_OPENROUTER = os.getenv("MODEL_OPENROUTER", "qwen/qwen2.5-vl-72b-instruct:free")
 
 # OpenAI (https://platform.openai.com)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-MODEL_OPENAI = os.getenv("MODEL_OPENAI", "gpt-4o-mini")
+MODEL_OPENAI = os.getenv("MODEL_OPENAI", "gpt-5.4-mini")
+
+# Zen (https://opencode.ai) — no API key required
+ZEN_API_KEY = os.getenv("ZEN_API_KEY", "")
+MODEL_ZEN = os.getenv("MODEL_ZEN", "minimax-m3-free")
+
+# Custom OpenAI-compatible provider
+CUSTOM_API_KEY = os.getenv("CUSTOM_API_KEY", "")
+CUSTOM_BASE_URL = os.getenv("CUSTOM_BASE_URL", "")
+MODEL_CUSTOM = os.getenv("MODEL_CUSTOM", "gpt-5.4-mini")
 
 
 # ✦ Assets Path - YOLO model and font files go here~ ✦
@@ -142,5 +151,9 @@ def get_provider_config(provider_name=None):
         return OPENROUTER_API_KEY, MODEL_OPENROUTER
     elif provider == "openai":
         return OPENAI_API_KEY, MODEL_OPENAI
+    elif provider == "zen":
+        return ZEN_API_KEY, MODEL_ZEN
+    elif provider == "custom":
+        return CUSTOM_API_KEY, MODEL_CUSTOM
     else:
         return "", ""
