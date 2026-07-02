@@ -1,11 +1,9 @@
 import os
 import time
 from ultralytics import YOLO
-from cypy.core.config import (
-    MODEL_YOLO, FONT_MANGA, LANG_CODES, SUPPORTED_IMAGE_EXTENSIONS,
-    LLM_PROVIDER, get_provider_config
-)
-from cypy.core.translator import proses_satu_gambar, mulai_ritual_pdf, proses_folder
+from cypy.core.config import get_provider_config
+import cypy.core.config as config
+from cypy.core.translator import proses_satu_gambar, mulai_ritual_pdf, proses_folder, mulai_ritual_archive
 from cypy.core.providers import create_provider
 from cypy.core.utils import create_shortcut_if_first_run
 from cypy import __version__
@@ -178,16 +176,92 @@ def setup_provider(provider_name=None):
     return provider
 
 
+def menu_tweak():
+    import cypy.core.config as config
+    print("\n" + "="*60)
+    print("TWEAK MENU - Adjust Settings on the fly~ ♪")
+    print("="*60 + "\n")
+    
+    for key, meta in config.TWEAKABLE_PARAMS.items():
+        curr_val = getattr(config, meta["var_name"], meta["default"])
+        print(f"  [{key}]")
+        print(f"    Current : {curr_val} (Default: {meta['default']})")
+        
+        if "min" in meta and "max" in meta:
+            print(f"    Range   : {meta['min']} - {meta['max']}")
+        elif "options" in meta:
+            opts = ", ".join(meta['options'])
+            print(f"    Options : {opts}")
+            
+        print(f"    Info    : {meta['desc']}")
+        if "effect" in meta:
+            print(f"    Efek    : {meta['effect']}")
+        print("")  # spacing antar parameter
+
+    print("="*60)
+    print("  Type 'set <param> <value>' to change (e.g. set pad_x 0.5)")
+    print("  Type 'back' or 'done' to return to main menu.")
+    print("="*60)
+
+    while True:
+        cmd = input("tweak> ").strip().lower()
+        if cmd in ("back", "done", "exit", "stop", "quit"):
+            break
+            
+        if cmd.startswith("set "):
+            parts = cmd.split(" ", 2)
+            if len(parts) < 3:
+                print("  [!] Format salah. Contoh: set pad_x 0.5")
+                continue
+                
+            _, param, val_str = parts
+            if param not in config.TWEAKABLE_PARAMS:
+                print(f"  [!] Parameter '{param}' tidak ditemukan.")
+                continue
+                
+            meta = config.TWEAKABLE_PARAMS[param]
+            val = None
+            try:
+                if meta["type"] == "int":
+                    val = int(val_str)
+                elif meta["type"] == "float":
+                    val = float(val_str)
+                elif meta["type"] == "bool":
+                    val = val_str.lower() in ("true", "1", "yes", "y", "on")
+                else:
+                    val = val_str
+                    
+                if "options" in meta and val not in meta["options"]:
+                    opts = ", ".join(meta['options'])
+                    print(f"  [!] Nilai harus salah satu dari: {opts}")
+                    continue
+                if "min" in meta and val < meta["min"]:
+                    print(f"  [!] Nilai minimal adalah {meta['min']}")
+                    continue
+                if "max" in meta and val > meta["max"]:
+                    print(f"  [!] Nilai maksimal adalah {meta['max']}")
+                    continue
+                    
+                setattr(config, meta["var_name"], val)
+                print(f"  [+] {param} diubah menjadi {val}")
+                
+                if config.save_local_profile():
+                    print("  [+] Profil tersimpan ke cypy_profile.json")
+                    
+            except ValueError:
+                print(f"  [!] Nilai harus berupa tipe {meta['type']}")
+
 def tampilkan_help():
     print("\n┌─────────────────────────────────────────────────────┐")
     print("│  Available Commands:                                │")
     print("│                                                     │")
-    print("│  [drag file]    Translate a single image or PDF     │")
-    print("│  [drag folder]  Batch translate all images in folder │")
+    print("│  [drag file]    Translate a single image, PDF       │")
+    print("│  [drag folder]  Batch translate all images in folder│")
     print("│  lang / switch  Change target language              │")
     print("│  provider / api Switch API provider                 │")
     print("│  model          Change the LLM model                │")
     print("│  status         Show current settings               │")
+    print("│  tweak          Adjust layout & filter parameters   │")
     print("│  help           Show this help menu                 │")
     print("│  stop / exit    Exit cypy                           │")
     print("├─────────────────────────────────────────────────────┤")
@@ -208,6 +282,10 @@ def main():
     # Automatically create desktop shortcut on first run (Windows only)
     create_shortcut_if_first_run()
 
+    import cypy.core.config as config
+    if config.load_local_profile():
+        print("\n[+] Loaded local profile (cypy_profile.json)")
+
     print(f"CYPY v{__version__} - Manga Translator")
     print("Ready to translate~ (◠‿●) ~♪")
 
@@ -215,14 +293,14 @@ def main():
     provider_name = pilih_provider()
     provider = setup_provider(provider_name)
 
-    if not os.path.exists(MODEL_YOLO):
+    if not os.path.exists(config.MODEL_YOLO):
         print("[!] YOLO model file not found.")
         raise SystemExit
 
-    if not os.path.exists(FONT_MANGA):
+    if not os.path.exists(config.FONT_MANGA):
         print("[!] Font file not found (will fallback to default).")
 
-    yolo_model = YOLO(MODEL_YOLO)
+    yolo_model = YOLO(config.MODEL_YOLO)
 
     target_language = pilih_bahasa()
 
@@ -233,7 +311,7 @@ def main():
 
     while True:
         try:
-            raw_input_str = input("\nDrag-and-drop image/PDF/folder here (or 'help' 'stop'): ")
+            raw_input_str = input("\nDrag-and-drop image/PDF/CBZ/folder here (or 'help' 'stop'): ")
             input_file = raw_input_str.strip("\"'& ")
 
             cmd = input_file.lower()
@@ -262,6 +340,10 @@ def main():
             if cmd == "status":
                 tampilkan_status(provider, target_language)
                 continue
+                
+            if cmd == "tweak":
+                menu_tweak()
+                continue
 
             if cmd == "help":
                 tampilkan_help()
@@ -284,14 +366,17 @@ def main():
                 if input_file.lower().endswith(".pdf"):
                     mulai_ritual_pdf(input_file, yolo_model, provider=provider, target_language=target_language)
 
-                elif input_file.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS):
+                elif input_file.lower().endswith(('.zip', '.cbz', '.rar', '.cbr')):
+                    mulai_ritual_archive(input_file, yolo_model, provider=provider, target_language=target_language)
+
+                elif input_file.lower().endswith(config.SUPPORTED_IMAGE_EXTENSIONS):
                     hasil = proses_satu_gambar(input_file, yolo_model, provider=provider, target_language=target_language)
 
                     if hasil:
                         print(f"Done! Saved at: {hasil}")
 
                 else:
-                    print("[!] Unsupported format. Please give me PNG, JPG, JPEG, WEBP, or PDF~")
+                    print("[!] Unsupported format. Please give me PNG, JPG, JPEG, WEBP, PDF, CBZ, ZIP, CBR, or RAR~ ♪")
                     continue
 
                 elapsed = time.time() - start_time
@@ -301,7 +386,7 @@ def main():
                 print("[!] File not found.")
 
         except KeyboardInterrupt:
-            print("\n\nGoodbye~ ♪")
+            print("\n\nGoodbye.")
             break
         except Exception as e:
             print(f"[!] An error occurred: {e}")

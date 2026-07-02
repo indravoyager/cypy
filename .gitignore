@@ -23,3 +23,6 @@ Thumbs.db
 build/
 dist/
 releases/
+
+# Config
+cypy_profile.json
