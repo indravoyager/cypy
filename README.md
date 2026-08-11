@@ -62,21 +62,6 @@ cypy
 cypy --cli
 ```
 
-### Output formats
-
-Set the export format in GUI **Advanced Settings** or with CLI `tweak`:
-
-| Setting | Result |
-| :--- | :--- |
-| `pdf` | Export PDF/archive inputs as a PDF. Default. |
-| `auto` | Export CBZ, ZIP, CBR, and RAR inputs as CBZ; export PDF inputs as PDF. |
-| `cbz` | Export PDF and archive inputs as CBZ. |
-| `none` | Keep translated PNG pages instead of creating an archive. |
-
-Folders already keep translated PNGs in the target-language subfolder.
-
----
-
 ## CLI Commands
 
 When running in **CLI Mode**, type commands directly into the prompt:
