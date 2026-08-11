@@ -291,6 +291,8 @@ _SETTINGS_FIELDS = [
     "opencodego_api_key", "model_opencodego",
     "custom_api_key", "custom_base_url", "model_custom",
     "min_request_delay", "max_bubbles_per_request", "last_opened_dir",
+    "pad_x_ratio", "pad_y_ratio", "min_pad", "skala_potongan_mosaik",
+    "mask_margin_ratio", "pakai_patch_untuk_box_gepeng", "filter_sfx_mode",
     "export_format",
 ]
 
@@ -391,7 +393,7 @@ class ConfigManager:
             except Exception as e:
                 print(f"[!] Error loading settings: {e}")
 
-    def save_settings(self):
+    def save_settings(self) -> bool:
         with self._lock:
             data = {}
             c = self._config
@@ -400,8 +402,10 @@ class ConfigManager:
             try:
                 with open(self._settings_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=4)
+                return True
             except Exception as e:
                 print(f"[!] Error saving settings: {e}")
+                return False
 
     def load_local_profile(self) -> bool:
         profile_path = os.path.join(os.getcwd(), "cypy_profile.json")

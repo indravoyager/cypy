@@ -235,8 +235,10 @@ def menu_tweak():
                 setattr(cfg, meta_info["attr"], val)
                 print(f"  [+] {param} diubah menjadi {val}")
 
-                if config_manager.save_local_profile():
-                    print("  [+] Profil tersimpan ke cypy_profile.json")
+                if config_manager.save_settings():
+                    print("  [+] Settings saved.")
+                else:
+                    print("  [!] Settings were not saved.")
 
             except ValueError:
                 print(f"  [!] Nilai harus berupa tipe {meta_info['type']}")
@@ -252,9 +254,6 @@ def run_cli():
 
     # Automatically create desktop shortcut on first run (Windows only)
     create_shortcut_if_first_run()
-
-    if config_manager.load_local_profile():
-        print("\n[+] Loaded local profile (cypy_profile.json)")
 
     ui.print_logo(APP_VER.lstrip('v'))
 

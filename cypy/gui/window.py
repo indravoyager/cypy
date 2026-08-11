@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 import queue
 import threading
 import time
@@ -342,7 +343,14 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         )
         self.base_url_entry.bind("<KeyRelease>", lambda e: self.on_base_url_changed(self.base_url_entry.get()))
 
-        ctk.CTkLabel(card2, text="", height=4).grid(row=4, column=0, columnspan=2)
+        ctk.CTkButton(
+            card2, text="ADVANCED SETTINGS", height=24,
+            font=("Consolas", 9, "bold"), text_color=COLOR_WHITE,
+            fg_color=COLOR_DARK_BTN, hover_color=COLOR_DARK_BTN_HOVER,
+            corner_radius=6, command=self.open_advanced_settings,
+        ).grid(row=4, column=0, columnspan=2, padx=10, pady=(6, 4), sticky="ew")
+
+        ctk.CTkLabel(card2, text="", height=4).grid(row=5, column=0, columnspan=2)
 
         action_frame = ctk.CTkFrame(left_container, fg_color="transparent")
         action_frame.grid(row=3, column=0, sticky="ew")
@@ -478,6 +486,160 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         config_manager.config.filter_sfx_mode = value
         config_manager.save_settings()
         self.append_log(f"SFX Mode: {value}\n")
+
+    def open_advanced_settings(self):
+        cfg = config_manager.config
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Advanced Settings")
+        dialog_width, dialog_height = 480, 550
+        self.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - dialog_width) // 2
+        y = self.winfo_y() + (self.winfo_height() - dialog_height) // 2
+        dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+        icon_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "assets", "favicon.ico",
+        )
+        if os.path.exists(icon_path):
+            try:
+                dialog.iconbitmap(icon_path)
+            except Exception:
+                pass
+        dialog.grid_columnconfigure(0, weight=1)
+        dialog.grid_columnconfigure(1, weight=1)
+
+        entries = {}
+
+        def field(label, value, row, column, allow_decimal=True):
+            frame = ctk.CTkFrame(dialog, fg_color="transparent")
+            frame.grid(row=row, column=column, padx=12, pady=4, sticky="ew")
+            frame.grid_columnconfigure(0, weight=1)
+            ctk.CTkLabel(
+                frame, text=label, font=("Terminal", 9, "bold"),
+                text_color=COLOR_GRAY, anchor="w",
+            ).grid(row=0, column=0, sticky="w", pady=(0, 2))
+            entry = ctk.CTkEntry(
+                frame, font=("Consolas", 10), fg_color=COLOR_WIDGET,
+                text_color=COLOR_WHITE, border_width=0, corner_radius=6, height=26,
+            )
+            entry.insert(0, str(value))
+            validate = dialog.register(
+                lambda proposed: not proposed
+                or (proposed.count(".") <= 1 and proposed.replace(".", "", 1).isdigit())
+                if allow_decimal else (not proposed or proposed.isdigit())
+            )
+            entry._entry.configure(validate="key", validatecommand=(validate, "%P"))
+            entry.grid(row=1, column=0, sticky="ew")
+            return entry
+
+        ctk.CTkLabel(dialog, text="OUTPUT", font=("Terminal", 10, "bold"), text_color=COLOR_WHITE).grid(
+            row=0, column=0, columnspan=2, padx=12, pady=(12, 2), sticky="w"
+        )
+        ctk.CTkLabel(dialog, text="EXPORT FORMAT", font=("Terminal", 9, "bold"), text_color=COLOR_GRAY).grid(
+            row=1, column=0, padx=12, pady=(2, 2), sticky="w"
+        )
+        export_format = RetroOptionMenu(
+            dialog, values=config.TWEAKABLE_PARAMS["export_format"]["options"],
+            font=("Consolas", 10), height=26,
+        )
+        export_format.set(cfg.export_format)
+        export_format.grid(row=2, column=0, columnspan=2, padx=12, pady=(0, 8), sticky="ew")
+        ctk.CTkLabel(
+            dialog,
+            text="pdf: PDF output. auto: CBZ for CBZ, ZIP, CBR, or RAR input. "
+                 "cbz: always CBZ. none: keep individual PNG pages.",
+            font=("Terminal", 8), text_color=COLOR_GRAY, justify="left",
+            wraplength=440, anchor="w",
+        ).grid(row=3, column=0, columnspan=2, padx=12, pady=(0, 6), sticky="w")
+
+        ctk.CTkLabel(dialog, text="REQUESTS", font=("Terminal", 10, "bold"), text_color=COLOR_WHITE).grid(
+            row=4, column=0, columnspan=2, padx=12, pady=(4, 2), sticky="w"
+        )
+        entries["min_request_delay"] = field("MINIMUM REQUEST DELAY (SECONDS)", cfg.min_request_delay, 5, 0)
+
+        ctk.CTkLabel(dialog, text="MOSAIC CROP", font=("Terminal", 10, "bold"), text_color=COLOR_WHITE).grid(
+            row=6, column=0, columnspan=2, padx=12, pady=(4, 2), sticky="w"
+        )
+        entries["pad_x_ratio"] = field("HORIZONTAL PADDING", cfg.pad_x_ratio, 7, 0)
+        entries["pad_y_ratio"] = field("VERTICAL PADDING", cfg.pad_y_ratio, 7, 1)
+        entries["min_pad"] = field("MINIMUM PADDING (PX)", cfg.min_pad, 8, 0, allow_decimal=False)
+        entries["skala_potongan_mosaik"] = field("CROP SCALE", cfg.skala_potongan_mosaik, 8, 1)
+
+        ctk.CTkLabel(dialog, text="RENDERING", font=("Terminal", 10, "bold"), text_color=COLOR_WHITE).grid(
+            row=9, column=0, columnspan=2, padx=12, pady=(4, 2), sticky="w"
+        )
+        entries["mask_margin_ratio"] = field("MASK MARGIN RATIO", cfg.mask_margin_ratio, 10, 0)
+        patch_flat_boxes = tk.BooleanVar(value=cfg.pakai_patch_untuk_box_gepeng)
+        ctk.CTkCheckBox(
+            dialog, text="Patch flat boxes", variable=patch_flat_boxes,
+            font=("Terminal", 10), text_color=COLOR_WHITE,
+        ).grid(row=10, column=1, padx=12, pady=(20, 0), sticky="w")
+        validation_error = ctk.CTkLabel(
+            dialog, text="", font=("Terminal", 9), text_color=COLOR_RED,
+            wraplength=440, justify="left", anchor="w",
+        )
+        validation_error.grid(row=11, column=0, columnspan=2, padx=12, pady=(8, 0), sticky="ew")
+        validation_error.grid_remove()
+
+        def show_validation_error(message):
+            validation_error.configure(text=message)
+            validation_error.grid()
+            dialog.geometry(f"{dialog_width}x580+{x}+{y - 15}")
+
+        def save_and_close():
+            numeric_fields = {
+                "min_request_delay": float,
+                "pad_x_ratio": float,
+                "pad_y_ratio": float,
+                "min_pad": int,
+                "skala_potongan_mosaik": float,
+                "mask_margin_ratio": float,
+            }
+            values = {}
+            for attr, convert in numeric_fields.items():
+                meta = next(item for item in config.TWEAKABLE_PARAMS.values() if item["attr"] == attr)
+                try:
+                    value = convert(entries[attr].get().strip())
+                except ValueError:
+                    show_validation_error(f"{attr.replace('_', ' ').title()} must be a number.")
+                    return
+                if convert is float and not math.isfinite(value):
+                    show_validation_error(f"{attr.replace('_', ' ').title()} must be a finite number.")
+                    return
+                if "min" in meta and value < meta["min"]:
+                    show_validation_error(f"{attr.replace('_', ' ').title()} must be at least {meta['min']}.")
+                    return
+                if "max" in meta and value > meta["max"]:
+                    show_validation_error(f"{attr.replace('_', ' ').title()} must be at most {meta['max']}.")
+                    return
+                values[attr] = value
+
+            original_values = {attr: getattr(cfg, attr) for attr in values}
+            original_export_format = cfg.export_format
+            original_patch_flat_boxes = cfg.pakai_patch_untuk_box_gepeng
+            for attr, value in values.items():
+                setattr(cfg, attr, value)
+            cfg.export_format = export_format.get()
+            cfg.pakai_patch_untuk_box_gepeng = patch_flat_boxes.get()
+            if not config_manager.save_settings():
+                for attr, value in original_values.items():
+                    setattr(cfg, attr, value)
+                cfg.export_format = original_export_format
+                cfg.pakai_patch_untuk_box_gepeng = original_patch_flat_boxes
+                show_validation_error("Could not save settings. Check the application data folder.")
+                return
+            self.append_log("Advanced settings saved.\n")
+            dialog.destroy()
+
+        ctk.CTkButton(
+            dialog, text="SAVE SETTINGS", width=140, height=28, font=("Consolas", 10, "bold"),
+            fg_color=COLOR_PINK, hover_color="#be185d",
+            command=save_and_close,
+        ).grid(row=12, column=0, columnspan=2, pady=(8, 12))
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
 
     def load_yolo_model(self):
         try:
