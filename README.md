@@ -19,6 +19,7 @@
 - **Smart Batching & Rate Limiting:** Automatic bubble chunking (max 20 per request), request throttling, and retry handling for vision LLM APIs.
 - **Multiple AI Providers:** Google Gemini, OpenAI, Zen (free), OpenCode Go, OpenRouter, and custom OpenAI-compatible endpoints.
 - **GUI & CLI Modes:** Desktop graphical interface or interactive terminal prompt.
+- **Configurable Exports:** Export translated PDF/archive pages as PDF or CBZ, or keep individual PNG pages.
 
 ---
 
@@ -60,6 +61,19 @@ cypy
 # CLI Mode
 cypy --cli
 ```
+
+### Output formats
+
+Set the export format in GUI **Advanced Settings** or with CLI `tweak`:
+
+| Setting | Result |
+| :--- | :--- |
+| `pdf` | Export PDF/archive inputs as a PDF. Default. |
+| `auto` | Export CBZ, ZIP, CBR, and RAR inputs as CBZ; export PDF inputs as PDF. |
+| `cbz` | Export PDF and archive inputs as CBZ. |
+| `none` | Keep translated PNG pages instead of creating an archive. |
+
+Folders already keep translated PNGs in the target-language subfolder.
 
 ---
 
