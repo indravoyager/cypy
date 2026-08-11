@@ -659,7 +659,7 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
                 elif input_path.lower().endswith(('.zip', '.cbz', '.rar', '.cbr')):
                     process_archive(input_path, self.yolo_model, provider=provider, target_language=target_lang)
                 elif input_path.lower().endswith(config.SUPPORTED_IMAGE_EXTENSIONS):
-                    process_single_image(input_path, self.yolo_model, provider=provider, target_language=target_language)
+                    process_single_image(input_path, self.yolo_model, provider=provider, target_language=target_lang)
                 else:
                     self.append_log("[!] Unsupported file format.\n")
             else:

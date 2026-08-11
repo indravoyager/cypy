@@ -191,6 +191,12 @@ TWEAKABLE_PARAMS = {
         "desc": "Margin ratio for white background masking inside speech bubbles.",
         "effect": "LARGER = tighter mask inside bubble border."
     },
+    "export_format": {
+        "attr": "export_format", "type": "str", "default": "pdf",
+        "options": ["pdf", "auto", "cbz", "none"],
+        "desc": "Export format for translated pages.",
+        "effect": "'auto' matches input format, 'none' keeps PNGs, 'cbz' packs to CBZ."
+    },
 }
 
 
@@ -252,6 +258,7 @@ class AppConfig:
     manual_translation_override: Dict[str, str] = field(default_factory=dict)
     cancel_translation: bool = False
     last_opened_dir: str = ""
+    export_format: str = "pdf"
 
     def get_provider_config(self, provider_name: str = "") -> Tuple[APIKey, str]:
         provider = (provider_name or self.llm_provider).lower()
@@ -284,6 +291,7 @@ _SETTINGS_FIELDS = [
     "opencodego_api_key", "model_opencodego",
     "custom_api_key", "custom_base_url", "model_custom",
     "min_request_delay", "max_bubbles_per_request", "last_opened_dir",
+    "export_format",
 ]
 
 
@@ -526,6 +534,7 @@ class _ConfigProxy:
         "TINGGI_BOX_GEPENG_RATIO": "tinggi_box_gepeng_ratio",
         "MANUAL_TRANSLATION_OVERRIDE": "manual_translation_override",
         "CANCEL_TRANSLATION": "cancel_translation",
+        "EXPORT_FORMAT": "export_format",
         "DATA_DIR": None,
         "SETTINGS_FILE": None,
     }

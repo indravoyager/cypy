@@ -101,6 +101,8 @@ def _composite_translations(main_image_pil, main_draw, coordinate_map, translati
         else:
             margin_x = int((x2 - x1) * config.MASK_MARGIN_RATIO)
             margin_y = int((y2 - y1) * config.MASK_MARGIN_RATIO)
+            margin_x = min(margin_x, (x2 - x1) // 2)
+            margin_y = min(margin_y, (y2 - y1) // 2)
 
             overlay = Image.new("RGBA", main_image_pil.size, (255, 255, 255, 0))
             draw_overlay = ImageDraw.Draw(overlay)
@@ -709,6 +711,44 @@ def process_image_batch(image_paths, yolo_model, provider, target_language="Indo
     return final_output_paths
 
 
+def _resolve_export_fmt(archive_path):
+    """Map config export_format to actual format, resolving 'auto' from input extension."""
+    fmt = config.EXPORT_FORMAT
+    if fmt == "auto":
+        ext = os.path.splitext(archive_path)[1].lower()
+        if ext in (".cbz", ".zip"):
+            return "cbz"
+        if ext in (".cbr", ".rar"):
+            return "cbz"
+        return "pdf"
+    return fmt
+
+
+def _export_archive(valid_paths, out_path, fmt):
+    """Export translated PNGs into a single CBZ or PDF file."""
+    if fmt == "cbz":
+        with zipfile.ZipFile(out_path, "w") as zf:
+            for img in valid_paths:
+                zf.write(img, os.path.basename(img))
+        print(f"Exported CBZ: {out_path}")
+    elif fmt == "pdf":
+        opened = []
+        try:
+            for img in valid_paths:
+                opened.append(Image.open(img).convert("RGB"))
+            if opened:
+                opened[0].save(out_path, save_all=True, append_images=opened[1:])
+                print(f"Exported PDF: {out_path}")
+        finally:
+            for im in opened:
+                try:
+                    im.close()
+                except Exception:
+                    pass
+    else:
+        print(f"[!] Unknown export format: {fmt}")
+
+
 def process_folder(folder_path, yolo_model, provider, target_language="Indonesian"):
     """Processes all supported images in a folder using Multi-Page Mosaic Batching."""
     supported = config.SUPPORTED_IMAGE_EXTENSIONS
@@ -769,20 +809,25 @@ def process_pdf(pdf_path, yolo_model, provider, target_language="Indonesian"):
         results = process_image_batch(page_paths, yolo_model, provider=provider, target_language=target_language)
 
         valid_paths = [p for p in results if p and os.path.exists(p)]
-        if valid_paths and not config.CANCEL_TRANSLATION:
-            print("Saving final PDF in exact original page order...")
-            output_pdf_path = _make_output_path(pdf_path, target_language, output_ext=".pdf")
-            opened_images = []
-            try:
-                for img in valid_paths:
-                    opened_images.append(Image.open(img).convert("RGB"))
-                if opened_images:
-                    opened_images[0].save(output_pdf_path, save_all=True, append_images=opened_images[1:])
-                    print(f"Done! Saved at: {output_pdf_path}")
-            finally:
-                for im in opened_images:
-                    try: im.close()
-                    except Exception: pass
+        fmt = _resolve_export_fmt(pdf_path)
+
+        if fmt != "none" and valid_paths and not config.CANCEL_TRANSLATION:
+            out_path = _make_output_path(pdf_path, target_language, output_ext=f".{fmt}")
+            _export_archive(valid_paths, out_path, fmt)
+
+        if fmt == "none" and valid_paths:
+            first = valid_paths[0]
+            src_dir = os.path.dirname(first)
+            dst_dir = os.path.join(os.path.dirname(pdf_path),
+                                   os.path.basename(src_dir))
+            if os.path.isdir(src_dir):
+                try:
+                    if os.path.exists(dst_dir):
+                        shutil.rmtree(dst_dir, ignore_errors=True)
+                    shutil.copytree(src_dir, dst_dir)
+                    print(f"Kept PNGs: {dst_dir}")
+                except Exception as e:
+                    print(f"[!] Failed to copy output: {e}")
 
         success = len(valid_paths)
         print(f"\n[PDF] Completed! Success: {success}, Failed: {total_pages - success}, Total: {total_pages}")
@@ -874,20 +919,25 @@ def process_archive(archive_path, yolo_model, provider, target_language="Indones
     results = process_image_batch(image_paths, yolo_model, provider=provider, target_language=target_language)
 
     valid_paths = [p for p in results if p and os.path.exists(p)]
-    if valid_paths and not config.CANCEL_TRANSLATION:
-        output_pdf_path = _make_output_path(archive_path, target_language, output_ext=".pdf")
-        print(f"\nCombining translated images into PDF in exact natural numerical order...")
-        opened_images = []
-        try:
-            for img in valid_paths:
-                opened_images.append(Image.open(img).convert("RGB"))
-            if opened_images:
-                opened_images[0].save(output_pdf_path, save_all=True, append_images=opened_images[1:])
-                print(f"Done! Saved at: {output_pdf_path}")
-        finally:
-            for im in opened_images:
-                try: im.close()
-                except Exception: pass
+    fmt = _resolve_export_fmt(archive_path)
+
+    if fmt != "none" and valid_paths and not config.CANCEL_TRANSLATION:
+        out_path = _make_output_path(archive_path, target_language, output_ext=f".{fmt}")
+        _export_archive(valid_paths, out_path, fmt)
+
+    if fmt == "none" and valid_paths:
+        first = valid_paths[0]
+        src_dir = os.path.dirname(first)
+        dst_dir = os.path.join(os.path.dirname(archive_path),
+                               os.path.basename(src_dir))
+        if os.path.isdir(src_dir):
+            try:
+                if os.path.exists(dst_dir):
+                    shutil.rmtree(dst_dir, ignore_errors=True)
+                shutil.copytree(src_dir, dst_dir)
+                print(f"Kept PNGs: {dst_dir}")
+            except Exception as e:
+                print(f"[!] Failed to copy output: {e}")
 
     success = len(valid_paths)
     print(f"\n[Archive] Completed! Success: {success}, Failed: {total - success}, Total: {total}")

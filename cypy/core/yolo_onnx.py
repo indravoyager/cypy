@@ -60,7 +60,7 @@ class YOLOONNX:
         im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
         return im, (r, r), (dw, dh)
 
-    def predict(self, source, conf=0.25, iou=0.45, _verbose=False):
+    def predict(self, source, conf=0.25, iou=0.45, verbose=False):
         if isinstance(source, str):
             img = cv2.imdecode(np.fromfile(source, dtype=np.uint8), cv2.IMREAD_COLOR)
             if img is None:
