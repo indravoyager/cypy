@@ -4,7 +4,7 @@ import requests
 from PIL.Image import Image
 
 from cypy.core.providers._constants import DEFAULT_HEADERS
-from cypy.core.providers.base import LLMProvider
+from cypy.core.providers.base import LLMProvider, ProviderError
 from cypy.core.config import REQUEST_TIMEOUT
 from cypy.core.services.image_service import image2base64
 
@@ -57,7 +57,7 @@ class ZenProvider(LLMProvider):
         )
 
         if response.status_code == 401:
-            raise ValueError("API_KEY_ERROR")
+            raise ProviderError
 
         if response.status_code != 200:
             try:

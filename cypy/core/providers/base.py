@@ -6,6 +6,10 @@ from PIL.Image import Image
 
 from cypy.core.types import APIKey, Never
 
+
+class ProviderError(Exception):
+    """Raised when the provider's API key is invalid or expired."""
+
 class LLMProvider(ABC):
     """
     Abstract base class for all LLM providers.
@@ -45,7 +49,7 @@ class LLMProvider(ABC):
                 or `None` if the request error.
 
         Raises:
-            ValueError("API_KEY_ERROR"): If the API key is invalid or expired.
+            ProviderError: If the API key is invalid or expired.
             Exception: For other API errors.
         """
         ...

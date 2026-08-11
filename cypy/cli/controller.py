@@ -9,6 +9,7 @@ work to the core pipeline (translator.py).
 import os
 import sys
 import time
+import traceback
 
 import cypy.core.config as config
 from cypy.core.config import config_manager, PROVIDER_REGISTRY, LANGUAGE_CHOICES, ROOT_DIR
@@ -73,6 +74,38 @@ def pilih_provider():
 # ✦ PROVIDER SETUP ✦
 # ==========================================
 
+def _commit_key(meta, api_key, env_path, provider_name):
+    """Persist an API key to .env and config, also recording LLM_PROVIDER + model."""
+    try:
+        config_manager.save_to_env(env_path, meta.env_key, api_key)
+        if not config_manager.env_has_key(env_path, "LLM_PROVIDER"):
+            config_manager.save_to_env(env_path, "LLM_PROVIDER", provider_name)
+        if not config_manager.env_has_key(env_path, meta.model_env_key):
+            config_manager.save_to_env(env_path, meta.model_env_key, meta.default_model)
+        config_manager.config.set_provider_api_key(provider_name, api_key)
+        os.environ[meta.env_key] = api_key
+        print(f"[+] API Key saved to: {env_path} (✿◠‿◠)")
+    except Exception as e:
+        print(f"[!] Warning: Failed to save API Key to .env: {e}")
+    return api_key
+
+
+def _prompt_and_save_key(meta, api_key, env_path, provider_name, skip_prompt=False):
+    """Ensure an API key is available, prompting (and persisting) only if missing."""
+    if api_key:
+        return api_key
+    if skip_prompt:
+        print("[+] Proceeding without API key~ ♪")
+        return api_key
+    print(f"\n[!] {meta.display_name} API Key is missing!")
+    if meta.url:
+        print(f"Get your API key from: {meta.url}")
+    api_key = input(f"Please paste your {meta.display_name} API Key here: ").strip()
+    while not api_key:
+        api_key = input("API Key cannot be empty. Please paste your API Key: ").strip()
+    return _commit_key(meta, api_key, env_path, provider_name)
+
+
 def setup_provider(provider_name=None):
     """Sets up the LLM provider, requesting API key if missing~ ♪"""
     cfg = config_manager.config
@@ -92,14 +125,7 @@ def setup_provider(provider_name=None):
                 print(f"    Optional: get a key at {meta.url} for more quota.")
             entered = input(f"Paste your {meta.display_name} API Key (or press Enter to skip): ").strip()
             if entered:
-                api_key = entered
-                try:
-                    config_manager.save_to_env(env_path, meta.env_key, api_key)
-                    cfg.set_provider_api_key(provider_name, api_key)
-                    os.environ[meta.env_key] = api_key
-                    print(f"[+] API Key saved to: {env_path} (✿◠‿◠)")
-                except Exception as e:
-                    print(f"[!] Warning: Failed to save API Key to .env: {e}")
+                api_key = _commit_key(meta, entered, env_path, provider_name)
             else:
                 print("[+] Proceeding without API key~ ♪")
     elif provider_name == "custom":
@@ -118,43 +144,11 @@ def setup_provider(provider_name=None):
                 os.environ["CUSTOM_BASE_URL"] = base_url
                 print(f"[+] Base URL saved to: {env_path}")
             except Exception as e:
-                print(f"[!] Warning: Failed to save Base URL: {e}")
+                print(f"[!] Warning: Failed to save Base URL to .env: {e}")
 
-        if not api_key:
-            print(f"\n[i] API key is optional (some providers don't require one).")
-            entered = input("Paste your API Key (or press Enter to skip): ").strip()
-            if entered:
-                api_key = entered
-                try:
-                    config_manager.save_to_env(env_path, meta.env_key, api_key)
-                    cfg.set_provider_api_key(provider_name, api_key)
-                    os.environ[meta.env_key] = api_key
-                    print(f"[+] API Key saved to: {env_path} (✿◠‿◠)")
-                except Exception as e:
-                    print(f"[!] Warning: Failed to save API Key to .env: {e}")
-            else:
-                print("[+] Proceeding without API key~ ♪")
-    elif not api_key:
-        print(f"\n[!] {meta.display_name} API Key is missing!")
-        print(f"Get your API key from: {meta.url}")
-        api_key = input(f"Please paste your {meta.display_name} API Key here: ").strip()
-
-        while not api_key:
-            api_key = input("API Key cannot be empty. Please paste your API Key: ").strip()
-
-        try:
-            config_manager.save_to_env(env_path, meta.env_key, api_key)
-            # Also write LLM_PROVIDER and default model to .env
-            if not config_manager.env_has_key(env_path, "LLM_PROVIDER"):
-                config_manager.save_to_env(env_path, "LLM_PROVIDER", provider_name)
-            if not config_manager.env_has_key(env_path, meta.model_env_key):
-                config_manager.save_to_env(env_path, meta.model_env_key, meta.default_model)
-
-            cfg.set_provider_api_key(provider_name, api_key)
-            os.environ[meta.env_key] = api_key
-            print(f"[+] API Key saved to: {env_path} (✿◠‿◠)")
-        except Exception as e:
-            print(f"[!] Warning: Failed to save API Key to .env: {e}")
+        api_key = _prompt_and_save_key(meta, api_key, env_path, provider_name, skip_prompt=True)
+    else:
+        api_key = _prompt_and_save_key(meta, api_key, env_path, provider_name)
 
     extra = {}
     if provider_name == "custom":
@@ -381,4 +375,5 @@ def run_cli():
             print("\n\nGoodbye.")
             break
         except Exception as e:
+            traceback.print_exc()
             print(f"[!] An error occurred: {e}")

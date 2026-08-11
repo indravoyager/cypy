@@ -1,7 +1,7 @@
 from typing import Literal, Optional
 from PIL.Image import Image
 
-from cypy.core.providers.base import LLMProvider
+from cypy.core.providers.base import LLMProvider, ProviderError
 from cypy.core.config import REQUEST_TIMEOUT
 
 try:
@@ -96,4 +96,4 @@ class GeminiProvider(LLMProvider):
         if any(keyword in err_str for keyword in [
             "api key expired", "api_key_invalid", "api key", "api_key"
         ]):
-            raise ValueError("API_KEY_ERROR")
+            raise ProviderError

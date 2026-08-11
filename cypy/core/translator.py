@@ -6,8 +6,8 @@ import re
 import fitz
 import zipfile
 import shutil
-import concurrent.futures
 import threading
+import traceback
 import uuid
 import numpy as np
 try:
@@ -18,6 +18,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 Image.init()
 
 from cypy.core.yolo_onnx import YOLOONNX as YOLO
+from cypy.core.providers.base import ProviderError
 import cypy.core.config as config
 from cypy.core.services.rate_limiter import rate_limiter
 from cypy.core.services.image_service import (
@@ -63,6 +64,65 @@ def _make_output_path(input_path, target_language, output_ext=".png"):
 
 
 yolo_lock = threading.Lock()
+
+
+def _composite_translations(main_image_pil, main_draw, coordinate_map, translations,
+                            img_width, img_height, target_language):
+    """Draw translated text back onto the page, skipping SKIP/empty and odd boxes."""
+    for num, text in translations.items():
+        if num not in coordinate_map:
+            continue
+        if text.upper() == "SKIP" and text.strip() != "":
+            continue
+        if text.strip() == "":
+            continue
+
+        x1, y1, x2, y2 = coordinate_map[num]
+        w, h = max(1, x2 - x1), max(1, y2 - y1)
+        ratio = w / float(h)
+        area_ratio = (w * h) / float(max(1, img_width * img_height))
+
+        if ratio >= 3.2 and w >= img_width * 0.35:
+            continue
+        if area_ratio >= 0.035 and ratio >= 2.8:
+            continue
+
+        suspicious_flat_box = (
+            ratio >= config.RASIO_BOX_GEPENG
+            and w >= img_width * config.LEBAR_BOX_GEPENG_RATIO
+            and h <= img_height * config.TINGGI_BOX_GEPENG_RATIO
+        )
+
+        if config.PAKAI_PATCH_UNTUK_BOX_GEPENG and suspicious_flat_box:
+            tulis_teks_di_balon(
+                main_draw, text, x1, y1, x2, y2,
+                background_patch=True, target_language=target_language
+            )
+        else:
+            margin_x = int((x2 - x1) * config.MASK_MARGIN_RATIO)
+            margin_y = int((y2 - y1) * config.MASK_MARGIN_RATIO)
+
+            overlay = Image.new("RGBA", main_image_pil.size, (255, 255, 255, 0))
+            draw_overlay = ImageDraw.Draw(overlay)
+            corner_radius = max(6, min(max(1, x2 - x1), max(1, y2 - y1)) // 3)
+            try:
+                draw_overlay.rounded_rectangle(
+                    [x1 + margin_x, y1 + margin_y, x2 - margin_x, y2 - margin_y],
+                    radius=corner_radius,
+                    fill=(255, 255, 255, 255)
+                )
+            except Exception:
+                draw_overlay.rectangle(
+                    [x1 + margin_x, y1 + margin_y, x2 - margin_x, y2 - margin_y],
+                    fill=(255, 255, 255, 255)
+                )
+            overlay_blurred = overlay.filter(ImageFilter.GaussianBlur(radius=3))
+            main_image_pil.paste(overlay_blurred, (0, 0), overlay_blurred)
+
+            tulis_teks_di_balon(
+                main_draw, text, x1, y1, x2, y2,
+                background_patch=False, target_language=target_language
+            )
 
 
 def translate_mosaic(mosaic_image_pil, provider, target_language="Indonesian", max_retry=3):
@@ -147,11 +207,11 @@ def translate_mosaic(mosaic_image_pil, provider, target_language="Indonesian", m
             max_retries=max_retry,
         )
         return result or {}
-    except ValueError as ve:
-        if str(ve) == "API_KEY_ERROR":
-            print(f"\n[!] API key for {provider.provider_name} is expired or invalid.")
+    except ProviderError:
+        print(f"\n[!] API key for {provider.provider_name} is expired or invalid.")
         return {}
     except Exception as e:
+        traceback.print_exc()
         print(f"\n[!] {provider.provider_name} request failed: {e}")
         return {}
 
@@ -431,82 +491,10 @@ def _process_single_image_core(image_path, yolo_model, provider, target_language
     if config.MANUAL_TRANSLATION_OVERRIDE:
         combined_translations.update(config.MANUAL_TRANSLATION_OVERRIDE)
 
-    for num, text in combined_translations.items():
-        if num in coordinate_map:
-            if text.upper() != "SKIP" and text.strip() != "":
-                x1, y1, x2, y2 = coordinate_map[num]
-                w = max(1, x2 - x1)
-                h = max(1, y2 - y1)
-                ratio = w / float(h)
-                area_ratio = (w * h) / float(max(1, img_width * img_height))
-
-                if ratio >= 3.2 and w >= img_width * 0.35:
-                    continue
-                if area_ratio >= 0.035 and ratio >= 2.8:
-                    continue
-
-                suspicious_flat_box = (
-                    ratio >= config.RASIO_BOX_GEPENG
-                    and w >= img_width * config.LEBAR_BOX_GEPENG_RATIO
-                    and h <= img_height * config.TINGGI_BOX_GEPENG_RATIO
-                )
-
-                if config.PAKAI_PATCH_UNTUK_BOX_GEPENG and suspicious_flat_box:
-                    tulis_teks_di_balon(
-                        main_draw,
-                        text,
-                        x1,
-                        y1,
-                        x2,
-                        y2,
-                        background_patch=True,
-                        target_language=target_language
-                    )
-                else:
-                    margin_x = int((x2 - x1) * config.MASK_MARGIN_RATIO)
-                    margin_y = int((y2 - y1) * config.MASK_MARGIN_RATIO)
-
-                    overlay = Image.new(
-                        "RGBA",
-                        main_image_pil.size,
-                        (255, 255, 255, 0)
-                    )
-                    draw_overlay = ImageDraw.Draw(overlay)
-                    corner_radius = max(6, min(max(1, x2 - x1), max(1, y2 - y1)) // 3)
-                    try:
-                        draw_overlay.rounded_rectangle(
-                            [
-                                x1 + margin_x,
-                                y1 + margin_y,
-                                x2 - margin_x,
-                                y2 - margin_y
-                            ],
-                            radius=corner_radius,
-                            fill=(255, 255, 255, 255)
-                        )
-                    except Exception:
-                        draw_overlay.rectangle(
-                            [
-                                x1 + margin_x,
-                                y1 + margin_y,
-                                x2 - margin_x,
-                                y2 - margin_y
-                            ],
-                            fill=(255, 255, 255, 255)
-                        )
-                    overlay_blurred = overlay.filter(ImageFilter.GaussianBlur(radius=3))
-                    main_image_pil.paste(overlay_blurred, (0, 0), overlay_blurred)
-
-                    tulis_teks_di_balon(
-                        main_draw,
-                        text,
-                        x1,
-                        y1,
-                        x2,
-                        y2,
-                        background_patch=False,
-                        target_language=target_language
-                    )
+    _composite_translations(
+        main_image_pil, main_draw, coordinate_map, combined_translations,
+        img_width, img_height, target_language
+    )
 
     output_path = _make_output_path(image_path, target_language)
     main_image_pil.save(output_path)
@@ -709,56 +697,10 @@ def process_image_batch(image_paths, yolo_model, provider, target_language="Indo
         if config.MANUAL_TRANSLATION_OVERRIDE:
             translations.update(config.MANUAL_TRANSLATION_OVERRIDE)
 
-        for num, text in translations.items():
-            if num in coordinate_map:
-                if text.upper() != "SKIP" and text.strip() != "":
-                    x1, y1, x2, y2 = coordinate_map[num]
-                    w = max(1, x2 - x1)
-                    h = max(1, y2 - y1)
-                    ratio = w / float(h)
-                    area_ratio = (w * h) / float(max(1, img_width * img_height))
-
-                    if ratio >= 3.2 and w >= img_width * 0.35:
-                        continue
-                    if area_ratio >= 0.035 and ratio >= 2.8:
-                        continue
-
-                    suspicious_flat_box = (
-                        ratio >= config.RASIO_BOX_GEPENG
-                        and w >= img_width * config.LEBAR_BOX_GEPENG_RATIO
-                        and h <= img_height * config.TINGGI_BOX_GEPENG_RATIO
-                    )
-
-                    if config.PAKAI_PATCH_UNTUK_BOX_GEPENG and suspicious_flat_box:
-                        tulis_teks_di_balon(
-                            main_draw, text, x1, y1, x2, y2,
-                            background_patch=True, target_language=target_language
-                        )
-                    else:
-                        margin_x = int((x2 - x1) * config.MASK_MARGIN_RATIO)
-                        margin_y = int((y2 - y1) * config.MASK_MARGIN_RATIO)
-
-                        overlay = Image.new("RGBA", main_image_pil.size, (255, 255, 255, 0))
-                        draw_overlay = ImageDraw.Draw(overlay)
-                        corner_radius = max(6, min(max(1, x2 - x1), max(1, y2 - y1)) // 3)
-                        try:
-                            draw_overlay.rounded_rectangle(
-                                [x1 + margin_x, y1 + margin_y, x2 - margin_x, y2 - margin_y],
-                                radius=corner_radius,
-                                fill=(255, 255, 255, 255)
-                            )
-                        except Exception:
-                            draw_overlay.rectangle(
-                                [x1 + margin_x, y1 + margin_y, x2 - margin_x, y2 - margin_y],
-                                fill=(255, 255, 255, 255)
-                            )
-                        overlay_blurred = overlay.filter(ImageFilter.GaussianBlur(radius=3))
-                        main_image_pil.paste(overlay_blurred, (0, 0), overlay_blurred)
-
-                        tulis_teks_di_balon(
-                            main_draw, text, x1, y1, x2, y2,
-                            background_patch=False, target_language=target_language
-                        )
+        _composite_translations(
+            main_image_pil, main_draw, coordinate_map, translations,
+            img_width, img_height, target_language
+        )
 
         output_path = _make_output_path(page['path'], target_language)
         main_image_pil.save(output_path)

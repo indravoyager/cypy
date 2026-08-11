@@ -77,7 +77,7 @@ def has_non_latin(text: str) -> bool:
     return bool(_NON_LATIN_SCRIPT_REGEX.search(str(text)))
 
 
-def get_font_for_text(text: str, size: int, language: Optional[str] = None) -> ImageFont.FreeTypeFont:
+def get_font_for_text(text: str, size: int, _language: Optional[str] = None) -> ImageFont.FreeTypeFont:
     """
     Returns the appropriate local font for the given text and target language.
     100% offline, zero network requests:

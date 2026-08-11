@@ -467,6 +467,12 @@ class _ConfigProxy:
     Provides backwards compatibility with the old `config.ATTR_NAME` pattern.
     """
 
+    _MODULE_ATTRS = (
+        "ROOT_DIR", "ASSETS_DIR", "CORE_DIR", "MODEL_YOLO", "FONT_MANGA",
+        "REQUEST_TIMEOUT", "SUPPORTED_IMAGE_EXTENSIONS", "LANG_CODES",
+        "LANGUAGE_CHOICES", "PROVIDER_REGISTRY", "TWEAKABLE_PARAMS",
+    )
+
     ROOT_DIR = ROOT_DIR
     ASSETS_DIR = ASSETS_DIR
     CORE_DIR = CORE_DIR
@@ -542,7 +548,7 @@ class _ConfigProxy:
         raise AttributeError(f"module 'cypy.core.config' has no attribute {name!r}")
 
     def __setattr__(self, name: str, value: Any):
-        if name.startswith("_") or name in ("config_manager", "ROOT_DIR", "ASSETS_DIR", "CORE_DIR", "MODEL_YOLO", "FONT_MANGA", "REQUEST_TIMEOUT", "SUPPORTED_IMAGE_EXTENSIONS", "LANG_CODES", "LANGUAGE_CHOICES", "PROVIDER_REGISTRY", "TWEAKABLE_PARAMS"):
+        if name.startswith("_") or name == "config_manager" or name in self._MODULE_ATTRS:
             super().__setattr__(name, value)
             return
         lower = self._UPPER_TO_LOWER.get(name)

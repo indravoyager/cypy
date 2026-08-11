@@ -3,6 +3,7 @@ import sys
 import queue
 import threading
 import time
+import traceback
 import webbrowser
 import tkinter as tk
 from tkinter import filedialog
@@ -33,8 +34,7 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         try:
             self.TkdndVersion = TkinterDnD._require(self)
         except Exception as e:
-            try: print(f"[!] Failed to initialize drag and drop: {e}")
-            except: pass
+            self.append_log(f"[!] Failed to initialize drag and drop: {e}")
 
         self.ic_folder = None
         self.ic_settings = None
@@ -50,13 +50,14 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
                 pil_img_settings = Image.open(icon_settings_file)
                 self.ic_settings = ctk.CTkImage(light_image=pil_img_settings, dark_image=pil_img_settings, size=(14, 14))
         except Exception as e:
-            print(f"[!] Failed to load icons: {e}")
+            self.append_log(f"[!] Failed to load icons: {e}")
+            traceback.print_exc()
 
         try:
             self.withdraw()
             self.attributes("-alpha", 0.0)
-        except Exception:
-            pass
+        except Exception as e:
+            self.append_log(f"[!] Failed to set window transparency early: {e}")
 
         self.title(f"cypy {APP_VER}")
         w_awal, h_awal = 750, 460
@@ -132,7 +133,7 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
             else:
                 ctk.CTkLabel(frame_pusat, text="◇", font=("Terminal", 60), text_color=COLOR_PINK).pack(pady=(5, 10))
         except Exception as e:
-            print(f"Error loading splash logo: {e}")
+            self.append_log(f"[!] Error loading splash logo: {e}")
             ctk.CTkLabel(frame_pusat, text="◇", font=("Terminal", 60), text_color=COLOR_PINK).pack(pady=(5, 10))
 
         ctk.CTkLabel(frame_pusat, text="cypy", font=("Terminal", 22, "bold"), text_color=COLOR_PINK).pack(pady=(0, 2))

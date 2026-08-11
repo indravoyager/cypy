@@ -4,7 +4,7 @@ import requests
 from PIL.Image import Image
 
 from cypy.core.providers._constants import DEFAULT_HEADERS
-from cypy.core.providers.base import APIKey, LLMProvider
+from cypy.core.providers.base import APIKey, LLMProvider, ProviderError
 from cypy.core.config import REQUEST_TIMEOUT
 from cypy.core.services.image_service import image2base64
 
@@ -73,7 +73,7 @@ class CustomProvider(LLMProvider):
         )
 
         if response.status_code in (401, 402):
-            raise ValueError("API_KEY_ERROR")
+            raise ProviderError
 
         if response.status_code != 200:
             self._resolve_error(self.provider_name, response)
