@@ -45,8 +45,12 @@ def create_provider(
     model_name: str,
     **kwargs: AnyDict
 ) -> LLMProvider:
-    # We need to cast the str type first here
-    cls = PROVIDER_MAP.get(cast(ProviderNames, provider_name))
+    name_key = provider_name.lower().strip()
+    cls = PROVIDER_MAP.get(cast(ProviderNames, name_key))
     if cls is None:
         raise ValueError(f"Unknown provider: {provider_name}")
+
+    if cls is not CustomProvider:
+        kwargs.pop("base_url", None)
+
     return cls(api_key=api_key, model_name=model_name, **kwargs)

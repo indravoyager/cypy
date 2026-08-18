@@ -32,13 +32,18 @@ class ProviderRateLimiter:
         if min_delay <= 0:
             return
 
+        sleep_time = 0.0
         with self._lock:
             now = time.time()
             elapsed = now - self._last_call_time
             if elapsed < min_delay:
                 sleep_time = min_delay - elapsed
-                time.sleep(sleep_time)
-            self._last_call_time = time.time()
+                self._last_call_time = now + sleep_time
+            else:
+                self._last_call_time = now
+
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
     def execute_with_retry(
         self,

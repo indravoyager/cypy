@@ -104,6 +104,7 @@ def tampilkan_help():
         ("provider / api", "Switch API provider"),
         ("model", "Change the LLM model name"),
         ("status", "Show current settings"),
+        ("test / api-test", "Test API provider connection"),
         ("tweak", "Adjust layout & filter parameters"),
         ("help", "Show this help menu"),
         ("stop / exit", "Exit cypy CLI")

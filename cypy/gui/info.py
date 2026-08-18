@@ -12,7 +12,6 @@ class InfoDialog(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
         
-        # [ANTI-GLITCH] Hide first
         self.withdraw()
         
         self.title("CYPY - Info & Support")
@@ -47,13 +46,21 @@ class InfoDialog(ctk.CTkToplevel):
         force_icon()
         self.after(200, force_icon)
         
-        # Title
-        lbl_title = ctk.CTkLabel(
-            self, text="CYPY Manga Translator", 
-            font=("Terminal", 12, "bold"), text_color=COLOR_PINK,
-            height=16
+        # Title (Matching main window header style)
+        title_frame = ctk.CTkFrame(self, fg_color="transparent")
+        title_frame.pack(pady=(12, 2))
+
+        lbl_logo = ctk.CTkLabel(
+            title_frame, text="◇ cypy ◇",
+            font=("Fixedsys", 16), text_color=COLOR_PINK
         )
-        lbl_title.pack(pady=(12, 4))
+        lbl_logo.pack(side="left")
+
+        lbl_desc = ctk.CTkLabel(
+            title_frame, text="Manga Translator",
+            font=("Terminal", 10), text_color="#aaaaaa"
+        )
+        lbl_desc.pack(side="left", padx=(6, 0))
         
         # Version and contributors (separated with spacing for better readability)
         lbl_version = ctk.CTkLabel(
@@ -63,33 +70,26 @@ class InfoDialog(ctk.CTkToplevel):
         )
         lbl_version.pack(pady=(2, 6))
 
-        lbl_author = ctk.CTkLabel(
-            self, text="Developed by indravoyager", 
-            font=("Terminal", 10), text_color="#aaaaaa",
-            height=14
-        )
-        lbl_author.pack(pady=3)
-
         lbl_contrib_title = ctk.CTkLabel(
-            self, text="Contributors:", 
+            self, text="Developed by:", 
             font=("Terminal", 10), text_color="#aaaaaa",
             height=14
         )
-        lbl_contrib_title.pack(pady=3)
+        lbl_contrib_title.pack(pady=(4, 3))
 
         lbl_contrib_list1 = ctk.CTkLabel(
-            self, text="cyrene, SayMaven, mitsuki31,", 
+            self, text="indravoyager, cyrene, SayMaven,", 
             font=("Terminal", 10), text_color="#aaaaaa",
             height=14
         )
-        lbl_contrib_list1.pack(pady=3)
+        lbl_contrib_list1.pack(pady=2)
 
         lbl_contrib_list2 = ctk.CTkLabel(
-            self, text="Alisa-Mikhailovna, mbayue", 
+            self, text="mitsuki31, Alisa-Mikhailovna, mbayue", 
             font=("Terminal", 10), text_color="#aaaaaa",
             height=14
         )
-        lbl_contrib_list2.pack(pady=3)
+        lbl_contrib_list2.pack(pady=2)
         
         # Buttons Container (GitHub & Support side-by-side in one row)
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -127,5 +127,4 @@ class InfoDialog(ctk.CTkToplevel):
         )
         btn_close.pack(pady=(12, 8))
         
-        # [ANTI-GLITCH] Show after window is ready
         self.after(100, self.deiconify)

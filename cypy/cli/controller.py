@@ -331,6 +331,15 @@ def run_cli():
                 ui.tampilkan_status(provider, target_language)
                 continue
 
+            if cmd in ("test", "test-api", "api-test"):
+                print(f"[i] Testing API connection for {provider.provider_name} ({provider.model_name})...")
+                success, msg = provider.test_connection()
+                if success:
+                    print(f"[+] {msg} (✿◠‿◠)")
+                else:
+                    print(f"[!] {msg}")
+                continue
+
             if cmd == "tweak":
                 menu_tweak()
                 continue

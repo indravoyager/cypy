@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 import requests
+from PIL import Image as PILImage
 from PIL.Image import Image
 
 from cypy.core.types import APIKey, Never
@@ -57,6 +58,27 @@ class LLMProvider(ABC):
     def validate_api_key(self, /) -> bool:
         """Check if the API key looks valid (non-empty). Override for deeper checks."""
         return bool(self.__api_key and self.__api_key.strip())
+
+    def test_connection(self, /) -> tuple[bool, str]:
+        """
+        Test the API connection by sending a minimal test request.
+        Returns a tuple of (success: bool, message: str).
+        """
+        if not self.validate_api_key():
+            return False, f"API Key for {self.provider_name} is missing or empty."
+
+        test_img = PILImage.new("RGB", (100, 100), color=(255, 255, 255))
+        test_prompt = 'Test connection. Return JSON: {"status": "ok"}'
+
+        try:
+            res = self.translate_image(test_img, test_prompt)
+            if res is not None:
+                return True, f"Connection successful to {self.provider_name} ({self.model_name})!"
+            return False, f"Connection failed: Empty response from {self.provider_name}."
+        except ProviderError:
+            return False, f"API Key for {self.provider_name} is invalid or expired."
+        except Exception as e:
+            return False, f"Connection error: {e}"
 
     @staticmethod
     def _resolve_error(provider_name: str, response: requests.Response) -> Never:

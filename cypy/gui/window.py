@@ -19,6 +19,7 @@ from cypy.core.providers import create_provider
 from cypy.core.translator import process_single_image, process_pdf, process_folder, process_archive
 from cypy.core.version import APP_VER
 from cypy.gui.info import InfoDialog
+from cypy.gui.advanced_settings import AdvancedSettingsDialog
 from cypy.gui.widgets import QueueWriteDescriptor, RetroOptionMenu
 from cypy.gui.theme import (
     COLOR_BG, COLOR_CARD, COLOR_WIDGET, COLOR_BORDER,
@@ -39,6 +40,9 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
 
         self.ic_folder = None
         self.ic_settings = None
+        self.ic_eye = None
+        self.ic_eye_off = None
+        self.ic_info = None
         try:
             assets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'assets')
             icon_file = os.path.join(assets_dir, 'icons', 'folder.png')
@@ -50,6 +54,21 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
             if os.path.exists(icon_settings_file):
                 pil_img_settings = Image.open(icon_settings_file)
                 self.ic_settings = ctk.CTkImage(light_image=pil_img_settings, dark_image=pil_img_settings, size=(14, 14))
+
+            icon_eye_file = os.path.join(assets_dir, 'icons', 'eye.png')
+            if os.path.exists(icon_eye_file):
+                pil_img_eye = Image.open(icon_eye_file)
+                self.ic_eye = ctk.CTkImage(light_image=pil_img_eye, dark_image=pil_img_eye, size=(14, 14))
+
+            icon_eye_off_file = os.path.join(assets_dir, 'icons', 'eye_off.png')
+            if os.path.exists(icon_eye_off_file):
+                pil_img_eye_off = Image.open(icon_eye_off_file)
+                self.ic_eye_off = ctk.CTkImage(light_image=pil_img_eye_off, dark_image=pil_img_eye_off, size=(14, 14))
+
+            icon_info_file = os.path.join(assets_dir, 'icons', 'info.png')
+            if os.path.exists(icon_info_file):
+                pil_img_info = Image.open(icon_info_file)
+                self.ic_info = ctk.CTkImage(light_image=pil_img_info, dark_image=pil_img_info, size=(14, 14))
         except Exception as e:
             self.append_log(f"[!] Failed to load icons: {e}")
             traceback.print_exc()
@@ -60,8 +79,8 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         except Exception as e:
             self.append_log(f"[!] Failed to set window transparency early: {e}")
 
-        self.title(f"cypy {APP_VER}")
-        w_awal, h_awal = 750, 460
+        self.title(f"CYPY Manga Translator {APP_VER}")
+        w_awal, h_awal = 750, 425
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         x = (screen_width // 2) - (w_awal // 2)
@@ -76,10 +95,8 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=0)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
-        self.create_header()
         self.create_main_panel()
 
         self.log_queue = queue.Queue()
@@ -187,45 +204,9 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
 
         splash.after(200, lambda: run_loading(0))
 
-    def create_header(self):
-        header_frame = ctk.CTkFrame(self, fg_color=COLOR_BG, height=38, corner_radius=0, border_width=1, border_color=COLOR_BORDER)
-        header_frame.grid(row=0, column=0, columnspan=2, sticky="ew")
-        header_frame.grid_propagate(False)
-        header_frame.grid_columnconfigure(0, weight=1)
-        header_frame.grid_columnconfigure(1, weight=0)
-        header_frame.grid_columnconfigure(2, weight=0)
-
-        title_container = ctk.CTkFrame(header_frame, fg_color="transparent")
-        title_container.grid(row=0, column=0, padx=12, pady=6, sticky="w")
-
-        lbl_logo = ctk.CTkLabel(
-            title_container, text="◇ cypy ◇",
-            font=("Fixedsys", 16), text_color=COLOR_PINK
-        )
-        lbl_logo.pack(side="left")
-
-        lbl_desc = ctk.CTkLabel(
-            title_container, text="Manga Translator",
-            font=("Terminal", 10), text_color=COLOR_GRAY
-        )
-        lbl_desc.pack(side="left", padx=(8, 0))
-
-        self.lbl_status = ctk.CTkLabel(
-            header_frame, text="Initializing...",
-            font=("Terminal", 10, "bold"), text_color=COLOR_ORANGE
-        )
-        self.lbl_status.grid(row=0, column=1, padx=(0, 8), pady=6, sticky="e")
-
-        btn_info = ctk.CTkButton(
-            header_frame, text="", image=self.ic_settings, width=22, height=22,
-            fg_color="transparent", hover_color="#333333", border_width=0,
-            corner_radius=0, command=self.show_info_popup
-        )
-        btn_info.grid(row=0, column=2, padx=(0, 12), pady=6, sticky="e")
-
     def create_main_panel(self):
         left_container = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
-        left_container.grid(row=1, column=0, sticky="nsew", padx=(12, 6), pady=(8, 12))
+        left_container.grid(row=0, column=0, sticky="nsew", padx=(12, 6), pady=12)
         left_container.grid_columnconfigure(0, weight=1)
         left_container.grid_rowconfigure(0, weight=0)
         left_container.grid_rowconfigure(1, weight=0)
@@ -313,13 +294,31 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
             font=("Consolas", 10), height=26, command=self.on_provider_changed
         )
 
-        self.api_key_entry = create_field(
-            card2, "API KEY", 2, 0, ctk.CTkEntry,
-            show="•", placeholder_text="Enter provider API key...",
+        api_key_frame = ctk.CTkFrame(card2, fg_color="transparent")
+        api_key_frame.grid(row=2, column=0, padx=10, pady=3, sticky="ew")
+        api_key_frame.grid_columnconfigure(0, weight=1)
+        api_key_frame.grid_columnconfigure(1, weight=0)
+
+        ctk.CTkLabel(
+            api_key_frame, text="API KEY", font=("Terminal", 9, "bold"),
+            text_color=COLOR_GRAY, anchor="w"
+        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 2))
+
+        self.api_key_entry = ctk.CTkEntry(
+            api_key_frame, show="•", placeholder_text="Enter provider API key...",
             font=("Consolas", 10), fg_color=COLOR_WIDGET, text_color=COLOR_WHITE,
             border_width=0, corner_radius=6, height=26
         )
+        self.api_key_entry.grid(row=1, column=0, sticky="ew", padx=(0, 3))
         self.api_key_entry.bind("<KeyRelease>", lambda e: self.on_api_key_changed(self.api_key_entry.get()))
+
+        self.toggle_key_btn = ctk.CTkButton(
+            api_key_frame, text="" if self.ic_eye else "👁",
+            image=self.ic_eye, width=26, height=26,
+            fg_color=COLOR_DARK_BTN, hover_color=COLOR_DARK_BTN_HOVER,
+            corner_radius=6, command=self.toggle_api_key_visibility
+        )
+        self.toggle_key_btn.grid(row=1, column=1, sticky="e")
 
         self.model_entry = create_field(
             card2, "MODEL NAME", 2, 1, ctk.CTkEntry,
@@ -344,11 +343,19 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         self.base_url_entry.bind("<KeyRelease>", lambda e: self.on_base_url_changed(self.base_url_entry.get()))
 
         ctk.CTkButton(
-            card2, text="ADVANCED SETTINGS", height=24,
-            font=("Consolas", 9, "bold"), text_color=COLOR_WHITE,
+            card2, text="ADVANCED SETTINGS", height=26,
+            font=("Consolas", 10, "bold"), text_color=COLOR_WHITE,
             fg_color=COLOR_DARK_BTN, hover_color=COLOR_DARK_BTN_HOVER,
             corner_radius=6, command=self.open_advanced_settings,
-        ).grid(row=4, column=0, columnspan=2, padx=10, pady=(6, 4), sticky="ew")
+        ).grid(row=4, column=0, padx=10, pady=(6, 8), sticky="ew")
+
+        self.test_api_btn = ctk.CTkButton(
+            card2, text="TEST API", height=26,
+            font=("Consolas", 10, "bold"), text_color=COLOR_WHITE,
+            fg_color=COLOR_DARK_BTN, hover_color=COLOR_DARK_BTN_HOVER,
+            corner_radius=6, command=self.test_api_connection,
+        )
+        self.test_api_btn.grid(row=4, column=1, padx=10, pady=(6, 8), sticky="ew")
 
         ctk.CTkLabel(card2, text="", height=4).grid(row=5, column=0, columnspan=2)
 
@@ -373,7 +380,7 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         self.open_folder_btn.grid(row=0, column=1, sticky="ew", padx=(3, 0))
 
         right_container = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
-        right_container.grid(row=1, column=1, sticky="nsew", padx=(6, 12), pady=(8, 12))
+        right_container.grid(row=0, column=1, sticky="nsew", padx=(6, 12), pady=12)
         right_container.grid_columnconfigure(0, weight=1)
         right_container.grid_rowconfigure(0, weight=1)
 
@@ -386,6 +393,14 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         lbl_log = ctk.CTkLabel(card3, text="LOG CONSOLE", font=("Terminal", 10, "bold"), text_color=COLOR_WHITE, anchor="w")
         lbl_log.grid(row=0, column=0, padx=10, pady=(8, 4), sticky="w")
 
+        btn_info = ctk.CTkButton(
+            card3, text="" if self.ic_info else "ⓘ", image=self.ic_info,
+            width=22, height=22, fg_color="transparent",
+            hover_color="#383838", corner_radius=4,
+            command=self.show_info_popup
+        )
+        btn_info.grid(row=0, column=1, padx=(0, 10), pady=(6, 2), sticky="e")
+
         self.log_textbox = ctk.CTkTextbox(
             card3, font=("Consolas", 10), fg_color=COLOR_WIDGET, text_color=COLOR_GREEN,
             border_width=0, corner_radius=6,
@@ -396,7 +411,7 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
             self.log_textbox._y_scrollbar.configure(width=4)
         except Exception:
             pass
-        self.log_textbox.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
+        self.log_textbox.grid(row=1, column=0, columnspan=2, padx=10, pady=(0, 10), sticky="nsew")
         self.log_textbox.insert("end", "CYPY Ready.\n")
         self.log_textbox.configure(state="disabled")
 
@@ -472,6 +487,20 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         config_manager.config.set_provider_api_key(provider_code, value)
         config_manager.save_settings()
 
+    def toggle_api_key_visibility(self):
+        if self.api_key_entry.cget("show") == "•":
+            self.api_key_entry.configure(show="")
+            self.toggle_key_btn.configure(
+                image=self.ic_eye_off if self.ic_eye_off else None,
+                text="" if self.ic_eye_off else "🙈"
+            )
+        else:
+            self.api_key_entry.configure(show="•")
+            self.toggle_key_btn.configure(
+                image=self.ic_eye if self.ic_eye else None,
+                text="" if self.ic_eye else "👁"
+            )
+
     def on_model_changed(self, value):
         provider_code = config_manager.config.llm_provider
         config_manager.config.set_provider_model(provider_code, value)
@@ -487,159 +516,41 @@ class CYPYWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         config_manager.save_settings()
         self.append_log(f"SFX Mode: {value}\n")
 
-    def open_advanced_settings(self):
+    def test_api_connection(self):
         cfg = config_manager.config
-        dialog = ctk.CTkToplevel(self)
-        dialog.title("Advanced Settings")
-        dialog_width, dialog_height = 480, 550
-        self.update_idletasks()
-        x = self.winfo_x() + (self.winfo_width() - dialog_width) // 2
-        y = self.winfo_y() + (self.winfo_height() - dialog_height) // 2
-        dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
-        dialog.resizable(False, False)
-        dialog.transient(self)
-        dialog.grab_set()
-        icon_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "assets", "favicon.ico",
-        )
-        if os.path.exists(icon_path):
+        provider_name = cfg.llm_provider
+        api_key, model_name = cfg.get_provider_config(provider_name)
+        base_url = cfg.custom_base_url if provider_name.lower() == "custom" else ""
+
+        self.append_log(f"[i] Testing API connection for {provider_name.title()} ({model_name})...\n")
+        self.test_api_btn.configure(state="disabled", text="Testing...")
+
+        def _worker():
             try:
-                dialog.iconbitmap(icon_path)
-            except Exception:
-                pass
-        dialog.grid_columnconfigure(0, weight=1)
-        dialog.grid_columnconfigure(1, weight=1)
+                extra = {}
+                if provider_name.lower() == "custom" and base_url:
+                    extra["base_url"] = base_url
 
-        entries = {}
+                provider = create_provider(
+                    provider_name,
+                    api_key=api_key,
+                    model_name=model_name,
+                    **extra
+                )
+                success, msg = provider.test_connection()
+                if success:
+                    self.append_log(f"[+] {msg} (✿◠‿◠)\n")
+                else:
+                    self.append_log(f"[!] {msg}\n")
+            except Exception as e:
+                self.append_log(f"[!] Failed to test API connection: {e}\n")
+            finally:
+                self.after(0, lambda: self.test_api_btn.configure(state="normal", text="TEST API"))
 
-        def field(label, value, row, column, allow_decimal=True):
-            frame = ctk.CTkFrame(dialog, fg_color="transparent")
-            frame.grid(row=row, column=column, padx=12, pady=4, sticky="ew")
-            frame.grid_columnconfigure(0, weight=1)
-            ctk.CTkLabel(
-                frame, text=label, font=("Terminal", 9, "bold"),
-                text_color=COLOR_GRAY, anchor="w",
-            ).grid(row=0, column=0, sticky="w", pady=(0, 2))
-            entry = ctk.CTkEntry(
-                frame, font=("Consolas", 10), fg_color=COLOR_WIDGET,
-                text_color=COLOR_WHITE, border_width=0, corner_radius=6, height=26,
-            )
-            entry.insert(0, str(value))
-            validate = dialog.register(
-                lambda proposed: not proposed
-                or (proposed.count(".") <= 1 and proposed.replace(".", "", 1).isdigit())
-                if allow_decimal else (not proposed or proposed.isdigit())
-            )
-            entry._entry.configure(validate="key", validatecommand=(validate, "%P"))
-            entry.grid(row=1, column=0, sticky="ew")
-            return entry
+        threading.Thread(target=_worker, daemon=True).start()
 
-        ctk.CTkLabel(dialog, text="OUTPUT", font=("Terminal", 10, "bold"), text_color=COLOR_WHITE).grid(
-            row=0, column=0, columnspan=2, padx=12, pady=(12, 2), sticky="w"
-        )
-        ctk.CTkLabel(dialog, text="EXPORT FORMAT", font=("Terminal", 9, "bold"), text_color=COLOR_GRAY).grid(
-            row=1, column=0, padx=12, pady=(2, 2), sticky="w"
-        )
-        export_format = RetroOptionMenu(
-            dialog, values=config.TWEAKABLE_PARAMS["export_format"]["options"],
-            font=("Consolas", 10), height=26,
-        )
-        export_format.set(cfg.export_format)
-        export_format.grid(row=2, column=0, columnspan=2, padx=12, pady=(0, 8), sticky="ew")
-        ctk.CTkLabel(
-            dialog,
-            text="pdf: PDF output. auto: CBZ for CBZ, ZIP, CBR, or RAR input. "
-                 "cbz: always CBZ. none: keep individual PNG pages.",
-            font=("Terminal", 8), text_color=COLOR_GRAY, justify="left",
-            wraplength=440, anchor="w",
-        ).grid(row=3, column=0, columnspan=2, padx=12, pady=(0, 6), sticky="w")
-
-        ctk.CTkLabel(dialog, text="REQUESTS", font=("Terminal", 10, "bold"), text_color=COLOR_WHITE).grid(
-            row=4, column=0, columnspan=2, padx=12, pady=(4, 2), sticky="w"
-        )
-        entries["min_request_delay"] = field("MINIMUM REQUEST DELAY (SECONDS)", cfg.min_request_delay, 5, 0)
-
-        ctk.CTkLabel(dialog, text="MOSAIC CROP", font=("Terminal", 10, "bold"), text_color=COLOR_WHITE).grid(
-            row=6, column=0, columnspan=2, padx=12, pady=(4, 2), sticky="w"
-        )
-        entries["pad_x_ratio"] = field("HORIZONTAL PADDING", cfg.pad_x_ratio, 7, 0)
-        entries["pad_y_ratio"] = field("VERTICAL PADDING", cfg.pad_y_ratio, 7, 1)
-        entries["min_pad"] = field("MINIMUM PADDING (PX)", cfg.min_pad, 8, 0, allow_decimal=False)
-        entries["skala_potongan_mosaik"] = field("CROP SCALE", cfg.skala_potongan_mosaik, 8, 1)
-
-        ctk.CTkLabel(dialog, text="RENDERING", font=("Terminal", 10, "bold"), text_color=COLOR_WHITE).grid(
-            row=9, column=0, columnspan=2, padx=12, pady=(4, 2), sticky="w"
-        )
-        entries["mask_margin_ratio"] = field("MASK MARGIN RATIO", cfg.mask_margin_ratio, 10, 0)
-        patch_flat_boxes = tk.BooleanVar(value=cfg.pakai_patch_untuk_box_gepeng)
-        ctk.CTkCheckBox(
-            dialog, text="Patch flat boxes", variable=patch_flat_boxes,
-            font=("Terminal", 10), text_color=COLOR_WHITE,
-        ).grid(row=10, column=1, padx=12, pady=(20, 0), sticky="w")
-        validation_error = ctk.CTkLabel(
-            dialog, text="", font=("Terminal", 9), text_color=COLOR_RED,
-            wraplength=440, justify="left", anchor="w",
-        )
-        validation_error.grid(row=11, column=0, columnspan=2, padx=12, pady=(8, 0), sticky="ew")
-        validation_error.grid_remove()
-
-        def show_validation_error(message):
-            validation_error.configure(text=message)
-            validation_error.grid()
-            dialog.geometry(f"{dialog_width}x580+{x}+{y - 15}")
-
-        def save_and_close():
-            numeric_fields = {
-                "min_request_delay": float,
-                "pad_x_ratio": float,
-                "pad_y_ratio": float,
-                "min_pad": int,
-                "skala_potongan_mosaik": float,
-                "mask_margin_ratio": float,
-            }
-            values = {}
-            for attr, convert in numeric_fields.items():
-                meta = next(item for item in config.TWEAKABLE_PARAMS.values() if item["attr"] == attr)
-                try:
-                    value = convert(entries[attr].get().strip())
-                except ValueError:
-                    show_validation_error(f"{attr.replace('_', ' ').title()} must be a number.")
-                    return
-                if convert is float and not math.isfinite(value):
-                    show_validation_error(f"{attr.replace('_', ' ').title()} must be a finite number.")
-                    return
-                if "min" in meta and value < meta["min"]:
-                    show_validation_error(f"{attr.replace('_', ' ').title()} must be at least {meta['min']}.")
-                    return
-                if "max" in meta and value > meta["max"]:
-                    show_validation_error(f"{attr.replace('_', ' ').title()} must be at most {meta['max']}.")
-                    return
-                values[attr] = value
-
-            original_values = {attr: getattr(cfg, attr) for attr in values}
-            original_export_format = cfg.export_format
-            original_patch_flat_boxes = cfg.pakai_patch_untuk_box_gepeng
-            for attr, value in values.items():
-                setattr(cfg, attr, value)
-            cfg.export_format = export_format.get()
-            cfg.pakai_patch_untuk_box_gepeng = patch_flat_boxes.get()
-            if not config_manager.save_settings():
-                for attr, value in original_values.items():
-                    setattr(cfg, attr, value)
-                cfg.export_format = original_export_format
-                cfg.pakai_patch_untuk_box_gepeng = original_patch_flat_boxes
-                show_validation_error("Could not save settings. Check the application data folder.")
-                return
-            self.append_log("Advanced settings saved.\n")
-            dialog.destroy()
-
-        ctk.CTkButton(
-            dialog, text="SAVE SETTINGS", width=140, height=28, font=("Consolas", 10, "bold"),
-            fg_color=COLOR_PINK, hover_color="#be185d",
-            command=save_and_close,
-        ).grid(row=12, column=0, columnspan=2, pady=(8, 12))
-        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+    def open_advanced_settings(self):
+        AdvancedSettingsDialog(self)
 
     def load_yolo_model(self):
         try:

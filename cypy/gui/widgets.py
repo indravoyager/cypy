@@ -26,7 +26,7 @@ class QueueWriteDescriptor:
                 pass
 
 class RetroOptionMenu(ctk.CTkFrame):
-    def __init__(self, master, values, command=None, height=26, font=("Consolas", 10), **kwargs):
+    def __init__(self, master, values, command=None, height=26, font=("Consolas", 10), max_visible=6, **kwargs):
         # Frame container with border to align perfectly with CTkEntry
         super().__init__(master, fg_color=COLOR_WIDGET, border_width=0, corner_radius=6, height=height)
         self.grid_propagate(False) # Keep fixed height of 26
@@ -39,6 +39,7 @@ class RetroOptionMenu(ctk.CTkFrame):
         self.command = command
         self.current_value = values[0] if values else ""
         self.font = font
+        self.max_visible = max_visible
         self.popup = None
         self._click_bind = None
         
@@ -95,24 +96,34 @@ class RetroOptionMenu(ctk.CTkFrame):
         self.popup.configure(fg_color=COLOR_BORDER)
         
         self.popup.transient(self.winfo_toplevel())
-        
-        inner = ctk.CTkFrame(self.popup, fg_color=COLOR_WIDGET, corner_radius=0)
-        inner.pack(padx=1, pady=1, fill="both", expand=True)
-        
+
+        num_visible = min(len(self.values), self.max_visible)
+
+        if len(self.values) > self.max_visible:
+            container = ctk.CTkScrollableFrame(
+                self.popup, fg_color=COLOR_WIDGET, corner_radius=0,
+                scrollbar_button_color=COLOR_DARK_BTN,
+                scrollbar_button_hover_color=COLOR_DARK_BTN_HOVER,
+            )
+            container.pack(padx=1, pady=1, fill="both", expand=True)
+        else:
+            container = ctk.CTkFrame(self.popup, fg_color=COLOR_WIDGET, corner_radius=0)
+            container.pack(padx=1, pady=1, fill="both", expand=True)
+
         for val in self.values:
             btn_opt = ctk.CTkButton(
-                inner, text=f"  {val}", font=self.font, text_color=COLOR_WHITE,
+                container, text=f"  {val}", font=self.font, text_color=COLOR_WHITE,
                 fg_color=COLOR_WIDGET, hover_color=COLOR_PINK, corner_radius=0, height=24,
                 anchor="w", command=lambda v=val: self.select_value(v)
             )
             btn_opt.pack(fill="x", padx=1, pady=1)
-            
+
         # Place popup exactly below the main dropdown field
         self.update_idletasks()
         x = self.winfo_rootx()
         y = self.winfo_rooty() + self.winfo_height()
         w = self.winfo_width()
-        h = len(self.values) * 26 + 2
+        h = num_visible * 26 + 6
         
         self.popup.geometry(f"{w}x{h}+{x}+{y}")
         self.popup.deiconify()

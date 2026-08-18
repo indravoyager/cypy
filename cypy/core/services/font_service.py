@@ -24,6 +24,73 @@ FONT_MANGA = config.FONT_MANGA  # Komika Axis.ttf
 FONT_UNIVERSAL = os.path.join(config.ASSETS_DIR, "KosugiMaru.ttf")  # Full CJK/Unicode font
 
 
+def get_system_font_map() -> Dict[str, str]:
+    """
+    Scans system font directories (Windows, Linux, macOS) for clean, popular font families.
+    Filters out hundreds of raw font variants to ensure instant 0ms UI dropdown loading.
+    """
+    font_map: Dict[str, str] = {}
+    dirs = []
+    if sys.platform == "win32":
+        windir = os.environ.get("WINDIR", r"C:\Windows")
+        dirs = [
+            os.path.join(windir, "Fonts"),
+            os.path.expanduser(r"~\AppData\Local\Microsoft\Windows\Fonts")
+        ]
+    elif sys.platform == "darwin":
+        dirs = ["/Library/Fonts", "/System/Library/Fonts", os.path.expanduser("~/Library/Fonts")]
+    else:
+        dirs = [
+            "/usr/share/fonts", "/usr/local/share/fonts",
+            os.path.expanduser("~/.fonts"), os.path.expanduser("~/.local/share/fonts")
+        ]
+
+    FAMILY_MAP = [
+        ("Arial", ["arial.ttf", "arial.otf"]),
+        ("Calibri", ["calibri.ttf", "calibri.otf"]),
+        ("Comic Sans MS", ["comic.ttf", "comic.otf"]),
+        ("Consolas", ["consolas.ttf", "consolas.otf"]),
+        ("Courier New", ["courier.ttf", "cour.ttf"]),
+        ("Georgia", ["georgia.ttf"]),
+        ("Impact", ["impact.ttf"]),
+        ("Lucida Console", ["lucon.ttf"]),
+        ("Segoe UI", ["segoeui.ttf"]),
+        ("Tahoma", ["tahoma.ttf"]),
+        ("Times New Roman", ["times.ttf"]),
+        ("Trebuchet MS", ["trebuc.ttf"]),
+        ("Verdana", ["verdana.ttf"]),
+        ("Garamond", ["gara.ttf"]),
+        ("Palatino", ["pala.ttf"]),
+        ("Century Gothic", ["gothic.ttf"]),
+    ]
+
+    all_found: Dict[str, str] = {}
+    for d in dirs:
+        if os.path.exists(d):
+            for root, _, files in os.walk(d):
+                for f in files:
+                    if f.lower().endswith((".ttf", ".otf")):
+                        all_found[f.lower()] = os.path.join(root, f)
+
+    # 1. Add curated popular font families first
+    for family_name, file_candidates in FAMILY_MAP:
+        for fc in file_candidates:
+            if fc.lower() in all_found:
+                font_map[family_name] = all_found[fc.lower()]
+                break
+
+    # 2. Add custom user installed fonts (e.g. AppData font dir or ~/.local/share/fonts)
+    for file_name, full_path in all_found.items():
+        if len(font_map) >= 25:
+            break
+        if "appdata" in full_path.lower() or ".local" in full_path.lower():
+            clean_name = os.path.splitext(os.path.basename(full_path))[0].replace("_", " ").title()
+            if clean_name not in font_map:
+                font_map[clean_name] = full_path
+
+    return font_map
+
+
 # Regex for non-Latin script letters (CJK, Hiragana, Katakana, Hangul, Thai, Cyrillic, Arabic)
 _NON_LATIN_SCRIPT_REGEX = re.compile(
     r'[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\uac00-\ud7af\u0e00-\u0e7f\u0400-\u04ff\u0600-\u06ff]'
@@ -68,6 +135,12 @@ def _get_font_object(path: str, size: int) -> Optional[ImageFont.FreeTypeFont]:
             pass
 
     with _font_lock:
+        if len(_font_object_cache) >= 500:
+            try:
+                first_key = next(iter(_font_object_cache))
+                _font_object_cache.pop(first_key, None)
+            except Exception:
+                pass
         _font_object_cache[key] = font
     return font
 
@@ -90,8 +163,9 @@ def get_font_for_text(text: str, size: int, language: Optional[str] = None) -> I
         if font:
             return font
 
-    # Latin text -> Always prefer Komika Axis.ttf (FONT_MANGA)
-    font = _get_font_object(FONT_MANGA, size)
+    # Latin text -> Always prefer configured manga font (config.FONT_MANGA)
+    manga_font_path = config.FONT_MANGA
+    font = _get_font_object(manga_font_path, size)
     if font:
         return font
 

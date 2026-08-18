@@ -129,7 +129,7 @@ LANGUAGE_CHOICES = [
 # ✦ STATIC CONSTANTS ✦
 # ==========================================
 MODEL_YOLO = os.path.join(ASSETS_DIR, "eyecypy.onnx")
-FONT_MANGA = os.path.join(ASSETS_DIR, "Komika Axis.ttf")
+DEFAULT_FONT_MANGA = os.path.join(ASSETS_DIR, "Komika Axis.ttf")
 REQUEST_TIMEOUT = 60 * 2  # 120s
 SUPPORTED_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
 
@@ -197,6 +197,11 @@ TWEAKABLE_PARAMS = {
         "desc": "Export format for translated pages.",
         "effect": "'auto' matches input format, 'none' keeps PNGs, 'cbz' packs to CBZ."
     },
+    "custom_font_path": {
+        "attr": "custom_font_path", "type": "str", "default": "",
+        "desc": "Custom font file (.ttf / .otf) path from PC for rendering translated text.",
+        "effect": "Empty = default Komika Axis.ttf font."
+    },
 }
 
 
@@ -259,6 +264,7 @@ class AppConfig:
     cancel_translation: bool = False
     last_opened_dir: str = ""
     export_format: str = "pdf"
+    custom_font_path: str = ""
 
     def get_provider_config(self, provider_name: str = "") -> Tuple[APIKey, str]:
         provider = (provider_name or self.llm_provider).lower()
@@ -293,7 +299,7 @@ _SETTINGS_FIELDS = [
     "min_request_delay", "max_bubbles_per_request", "last_opened_dir",
     "pad_x_ratio", "pad_y_ratio", "min_pad", "skala_potongan_mosaik",
     "mask_margin_ratio", "pakai_patch_untuk_box_gepeng", "filter_sfx_mode",
-    "export_format",
+    "export_format", "custom_font_path",
 ]
 
 
@@ -400,8 +406,10 @@ class ConfigManager:
             for key in _SETTINGS_FIELDS:
                 data[key] = getattr(c, key, "")
             try:
-                with open(self._settings_file, "w", encoding="utf-8") as f:
+                tmp_file = self._settings_file + ".tmp"
+                with open(tmp_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=4)
+                os.replace(tmp_file, self._settings_file)
                 return True
             except Exception as e:
                 print(f"[!] Error saving settings: {e}")
@@ -431,8 +439,10 @@ class ConfigManager:
         for key, meta in TWEAKABLE_PARAMS.items():
             data[key] = getattr(c, meta["attr"], meta["default"])
         try:
-            with open(profile_path, "w", encoding="utf-8") as f:
+            tmp_path = profile_path + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
+            os.replace(tmp_path, profile_path)
             return True
         except Exception as e:
             print(f"[!] Error saving local profile: {e}")
@@ -480,7 +490,7 @@ class _ConfigProxy:
     """
 
     _MODULE_ATTRS = (
-        "ROOT_DIR", "ASSETS_DIR", "CORE_DIR", "MODEL_YOLO", "FONT_MANGA",
+        "ROOT_DIR", "ASSETS_DIR", "CORE_DIR", "MODEL_YOLO",
         "REQUEST_TIMEOUT", "SUPPORTED_IMAGE_EXTENSIONS", "LANG_CODES",
         "LANGUAGE_CHOICES", "PROVIDER_REGISTRY", "TWEAKABLE_PARAMS",
     )
@@ -489,7 +499,7 @@ class _ConfigProxy:
     ASSETS_DIR = ASSETS_DIR
     CORE_DIR = CORE_DIR
     MODEL_YOLO = MODEL_YOLO
-    FONT_MANGA = FONT_MANGA
+    DEFAULT_FONT_MANGA = DEFAULT_FONT_MANGA
     REQUEST_TIMEOUT = REQUEST_TIMEOUT
     SUPPORTED_IMAGE_EXTENSIONS = SUPPORTED_IMAGE_EXTENSIONS
     LANG_CODES = LANG_CODES
@@ -544,6 +554,12 @@ class _ConfigProxy:
     }
 
     def __getattr__(self, name: str) -> Any:
+        if name == "FONT_MANGA":
+            cfg_path = getattr(config_manager.config, "custom_font_path", "")
+            if cfg_path and os.path.isfile(cfg_path):
+                return cfg_path
+            return DEFAULT_FONT_MANGA
+
         if name in self._UPPER_TO_LOWER:
             lower = self._UPPER_TO_LOWER[name]
             if lower is None:
